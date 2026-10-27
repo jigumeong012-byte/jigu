@@ -1,0 +1,12 @@
+.tools/
+.local/
+backend/target/
+backend/data/
+.env
+.env.*
+!.env.example
+node_modules/
+.idea/
+*.iml
+.DS_Store
+*.log

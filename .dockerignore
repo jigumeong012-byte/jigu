@@ -1,0 +1,13 @@
+.git
+.github
+.local
+.tools
+.env
+.env.*
+backend/target
+backend/data
+node_modules
+tests
+scripts
+*.png
+*.log
