@@ -70,6 +70,12 @@ class QuestApiTest {
         assertEquals(0, body(send("GET", "/api/quests?userId=" + userId, null)).size());
         assertTrue(send("GET", "/", null).body().contains("LifeQuest"));
         assertEquals(200, send("GET", "/api.js", null).statusCode());
+        var manifest = send("GET", "/manifest.webmanifest", null);
+        assertEquals(200, manifest.statusCode());
+        assertTrue(manifest.headers().firstValue("Content-Type").orElse("").startsWith("application/manifest+json"));
+        assertEquals("standalone", body(manifest).get("display").asText());
+        assertEquals(200, send("GET", "/service-worker.js", null).statusCode());
+        assertEquals(200, send("GET", "/icons/icon-192.png", null).statusCode());
         var health = send("GET", "/api/health", null);
         assertEquals(200, health.statusCode());
         assertEquals("UP", body(health).get("status").asText());

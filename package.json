@@ -3,5 +3,5 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "scripts": { "dev": "node server.mjs", "start": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run.ps1", "check": "node --check dist/app.js && node --check dist/model.js && node --check dist/api.js && node --check server.mjs", "test": "node --test tests/*.test.mjs", "test:all": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test.ps1" }
+  "scripts": { "dev": "node server.mjs", "start": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/run.ps1", "check": "node --check dist/app.js && node --check dist/model.js && node --check dist/api.js && node --check dist/service-worker.js && node --check server.mjs", "test": "node --test tests/*.test.mjs", "test:all": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test.ps1" }
 }

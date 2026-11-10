@@ -19,6 +19,11 @@ test('development server serves assets, proxies JSON, and reports an unavailable
  });
  assert.equal((await fetch(origin)).status,200);
  assert.equal((await fetch(origin+'/api.js')).status,200);
+ const manifest = await fetch(origin+'/manifest.webmanifest');
+ assert.match(manifest.headers.get('content-type'),/application\/manifest\+json/);
+ assert.equal((await manifest.json()).display,'standalone');
+ assert.match((await fetch(origin+'/icons/icon-192.png')).headers.get('content-type'),/image\/png/);
+ assert.equal((await fetch(origin+'/service-worker.js')).status,200);
  const response=await fetch(origin+'/api/quests?userId=1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:'프록시 확인'})});
  assert.equal(response.status,201);
  assert.deepEqual(await response.json(),{method:'POST',path:'/api/quests?userId=1',body:{title:'프록시 확인'}});

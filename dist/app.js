@@ -1,6 +1,16 @@
 import { categories, initialState, stats, createTask, dayKey } from './model.js';
 import { api, toTask } from './api.js';
 
+let installPrompt = null;
+window.addEventListener('beforeinstallprompt', event => {
+ event.preventDefault();
+ installPrompt = event;
+});
+window.addEventListener('appinstalled', () => { installPrompt = null; toast('LifeQuest가 설치되었어요.'); });
+if ('serviceWorker' in navigator) {
+ window.addEventListener('load', () => navigator.serviceWorker.register('/service-worker.js').catch(() => {}));
+}
+
 const KEY = 'lifequest.api.v1';
 const app = document.querySelector('#app');
 const modal = document.querySelector('#modal');
@@ -71,7 +81,7 @@ function header() {
  const selected=route.startsWith('/task')?'tasks':route.startsWith('/growth')?'growth':route.startsWith('/settings')||route==='/profile'?'settings':'home';
  return `<header class="header"><div class="header-inner"><div class="row"><a class="brand" href="#/" aria-label="LifeQuest 홈"><img src="./icon.svg" alt="">LifeQuest</a><nav class="nav" aria-label="주 메뉴">${[['home','/','홈'],['tasks','/tasks','내 할 일'],['growth','/growth','성장'],['settings','/settings','설정']].map(([id,path,label])=>`<a href="#${path}" ${selected===id?'class="active" aria-current="page"':''}>${label}</a>`).join('')}</nav></div><div class="row"><a href="#/growth" class="level-tag">${icon('medal')} Lv. ${s.level} Explorer</a><button class="profile-button row" data-action="profile-menu" aria-label="프로필 메뉴">${avatar()}${icon('down')}</button></div></div></header>`;
 }
-function footer() { return `<footer class="footer"><div><strong>LifeQuest</strong> © ${new Date().getFullYear()} LifeQuest. 매일 조금씩 성장하는 나.</div><div class="row"><button data-action="info" data-kind="terms">이용약관</button><button data-action="info" data-kind="privacy">개인정보처리방침</button><button data-action="info" data-kind="support">고객지원</button></div></footer>`; }
+function footer() { return `<footer class="footer"><div><strong>LifeQuest</strong> © ${new Date().getFullYear()} LifeQuest. 매일 조금씩 성장하는 나.</div><div class="row"><button data-action="install-app">앱 설치</button><button data-action="info" data-kind="terms">이용약관</button><button data-action="info" data-kind="privacy">개인정보처리방침</button><button data-action="info" data-kind="support">고객지원</button></div></footer>`; }
 function render() {
  const route=currentRoute();
  if (!serverReady) {
@@ -167,6 +177,18 @@ document.addEventListener('click', async e=>{
  try {
  switch(a){
  case 'reconnect':await connect();break;
+ case 'install-app': {
+  if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) {
+   toast('이미 앱으로 사용하고 있어요.'); break;
+  }
+  if (installPrompt) {
+   const prompt = installPrompt; installPrompt = null;
+   await prompt.prompt();
+  } else {
+   openModal(`${modalHeader('홈 화면에 LifeQuest 추가하기')}<div class="modal-text legal"><p><b>iPhone / iPad:</b> Safari에서 공유 버튼을 누르고 ‘홈 화면에 추가’를 선택하세요.</p><p><b>Android:</b> Chrome 메뉴에서 ‘앱 설치’ 또는 ‘홈 화면에 추가’를 선택하세요.</p><p>설치 메뉴는 브라우저와 기기 설정에 따라 다를 수 있어요. 퀘스트를 이용하려면 인터넷 연결이 필요합니다.</p></div><button class="btn primary full space-top" data-action="close">확인</button>`);
+  }
+  break;
+ }
  case 'close':closeModal();break;
  case 'add':addModal();break;
  case 'dismiss-banner':state.banner=false;save();render();break;
