@@ -15,7 +15,7 @@ cd "C:\Users\master\Desktop\Java 프로젝트\lifequest"
 npm.cmd start
 ```
 
-접속 주소: http://localhost:8080
+접속 주소: https://lifequest-production-f977.up.railway.app/
 
 JDK 21, MySQL 8.0+, Node.js가 필요합니다. 현재 PC의 설치 경로를 자동으로 찾습니다. Maven은 기존 설치 또는 캐시를 우선 사용하며, 없으면 체크섬을 검증해 내려받습니다. 최초 빌드에는 인터넷 연결이 필요합니다.
 
