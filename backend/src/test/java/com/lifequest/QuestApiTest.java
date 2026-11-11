@@ -117,4 +117,34 @@ class QuestApiTest {
         assertEquals(404,send("POST","/api/quests/9223372036854775807/complete",null).statusCode());
         assertEquals(0,body(send("GET","/api/quests?userId="+userId,null)).size());
     }
+
+    @Test void unusualTitlesAndInputBoundaries() throws Exception {
+        String special = "눈사람 ☃️ & <script>alert('테스트')</script>";
+        String valid = json.writeValueAsString(Map.of("userId", userId, "title", special,
+            "category", "독서", "difficulty", "보통"));
+        var saved = send("POST", "/api/quests", valid);
+        assertEquals(201, saved.statusCode(), saved.body());
+        assertEquals(special, body(saved).get("title").asText());
+        assertEquals(1, body(send("GET", "/api/quests?userId=" + userId, null)).size());
+
+        String hundred = "가".repeat(100);
+        String atLimit = json.writeValueAsString(Map.of("userId", userId, "title", hundred,
+            "category", "생활", "difficulty", "쉬움"));
+        assertEquals(201, send("POST", "/api/quests", atLimit).statusCode());
+        String overLimit = json.writeValueAsString(Map.of("userId", userId, "title", hundred + "가",
+            "category", "생활", "difficulty", "쉬움"));
+        assertEquals(400, send("POST", "/api/quests", overLimit).statusCode());
+        assertEquals(400, send("POST", "/api/quests", "{}").statusCode());
+        assertEquals(400, send("POST", "/api/quests", "{\"userId\":-1,\"title\":\"x\",\"category\":\"생활\",\"difficulty\":\"쉬움\"}").statusCode());
+        assertEquals(2, body(send("GET", "/api/quests?userId=" + userId, null)).size());
+    }
+
+    @Test void repeatDeleteAndChangesToDeletedQuestAreRejected() throws Exception {
+        long id = create("보통");
+        assertEquals(204, send("DELETE", "/api/quests/" + id, null).statusCode());
+        assertEquals(404, send("DELETE", "/api/quests/" + id, null).statusCode());
+        assertEquals(404, send("POST", "/api/quests/" + id + "/complete", null).statusCode());
+        assertEquals(404, send("PUT", "/api/quests/" + id, payload("보통")).statusCode());
+        assertEquals(0, user().get("exp").asInt());
+    }
 }

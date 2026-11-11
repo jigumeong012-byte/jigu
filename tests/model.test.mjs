@@ -40,3 +40,14 @@ test('connection failure produces a retryable message',async t=>{
  t.mock.method(globalThis,'fetch',async()=>{throw new TypeError('Failed to fetch');});
  await assert.rejects(request('/users/1'),/서버에 연결할 수 없어요/);
 });
+test('unusual task names are retained as data and boundary lengths are checked',()=>{
+ const special='<img src=x onerror=alert(1)> & 눈사람 ☃️';
+ assert.equal(createTask({title:`  ${special}  `,xp:30}).title,special);
+ assert.equal(createTask({title:'가'.repeat(100),xp:10}).title.length,100);
+ assert.throws(()=>createTask({title:'가'.repeat(101),xp:10}));
+ assert.throws(()=>createTask({title:'\u00a0\t\n',xp:30}));
+});
+test('HTML error pages give a safe message',async t=>{
+ t.mock.method(globalThis,'fetch',async()=>new Response('<html>server error</html>',{status:503}));
+ await assert.rejects(request('/quests'),error=>error.status===503&&!error.message.includes('<html>'));
+});
