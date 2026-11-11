@@ -2,7 +2,7 @@ name: Verify LifeQuest
 
 on:
   push:
-    branches: [main]
+    branches: [main, free-render-aiven]
   pull_request:
 
 permissions:

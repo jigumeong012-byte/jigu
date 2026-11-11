@@ -9,8 +9,9 @@ RUN mvn -B -f backend/pom.xml -DskipTests package
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 COPY --from=build /workspace/backend/target/lifequest-1.0.0.jar app.jar
+COPY --chmod=0555 scripts/start-container.sh /app/start-container.sh
 ENV SPRING_PROFILES_ACTIVE=prod
 ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0 -Duser.timezone=Asia/Seoul"
 USER 10001:10001
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+ENTRYPOINT ["/app/start-container.sh"]

@@ -8,6 +8,7 @@ backend/target
 backend/data
 node_modules
 tests
-scripts
+scripts/*
+!scripts/start-container.sh
 *.png
 *.log

@@ -72,3 +72,5 @@ npm.cmd run test:all
 ## 클라우드 배포
 
 현재 웹앱은 Railway의 Spring Boot 서비스와 MySQL로 배포되어 있으며, 로컬 DB와 클라우드 DB는 서로 다릅니다. Docker·Railway 설정과 GitHub Actions 검증을 제공합니다. 배포 후 Railway 상태에서 새 커밋이 실제 반영됐는지 확인하세요. 자세한 설정은 [DEPLOYMENT.md](DEPLOYMENT.md)를 확인하세요.
+
+무료 환경을 위한 Render와 Aiven 전환은 [무료 배포 준비 문서](FREE_DEPLOYMENT.md)에 정리되어 있습니다. 이 전환은 아직 완료되지 않았습니다.
