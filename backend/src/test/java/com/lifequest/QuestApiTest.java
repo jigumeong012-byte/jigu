@@ -24,6 +24,7 @@ class QuestApiTest {
     @Value("${local.server.port}") int port;
     @Autowired UserRepository users;
     @Autowired QuestRepository quests;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
     final HttpClient client = HttpClient.newBuilder().cookieHandler(new java.net.CookieManager()).connectTimeout(Duration.ofSeconds(5)).build();
     final ObjectMapper json = new ObjectMapper();
     Long userId;
@@ -59,6 +60,42 @@ class QuestApiTest {
         return body(result).get("id").asLong();
     }
     JsonNode user() throws Exception { return body(send("GET", "/api/users/" + userId, null)); }
+
+    @Test void rememberedLoginSurvivesSessionLossAndLogoutRevokesIt() throws Exception {
+        User user = users.findById(userId).orElseThrow();
+        String login = json.writeValueAsString(Map.of("email", user.getEmail(), "password", "Password1", "remember", true));
+        var response = send("POST", "/api/auth/login", login);
+        assertEquals(200, response.statusCode());
+        String cookie = response.headers().allValues("Set-Cookie").stream()
+            .filter(value -> value.startsWith("lifequest_remember=") && value.contains("Max-Age=2592000"))
+            .findFirst().orElseThrow();
+        assertTrue(cookie.contains("HttpOnly"));
+        assertTrue(cookie.contains("SameSite=Lax"));
+        String token = cookie.substring(0, cookie.indexOf(';'));
+        HttpClient fresh = HttpClient.newHttpClient();
+        var me = HttpRequest.newBuilder(URI.create("http://127.0.0.1:"+port+"/api/auth/me")).header("Cookie",token).GET().build();
+        assertEquals(200, fresh.send(me, HttpResponse.BodyHandlers.ofString()).statusCode());
+        var logout = HttpRequest.newBuilder(URI.create("http://127.0.0.1:"+port+"/api/auth/logout")).header("Cookie",token).POST(HttpRequest.BodyPublishers.noBody()).build();
+        assertEquals(200, fresh.send(logout, HttpResponse.BodyHandlers.ofString()).statusCode());
+        assertEquals(401, fresh.send(me, HttpResponse.BodyHandlers.ofString()).statusCode());
+        assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM remember_tokens WHERE user_id=?", Integer.class, userId));
+    }
+
+    @Test void ordinaryLoginDoesNotIssuePersistentCookie() throws Exception {
+        User user = users.findById(userId).orElseThrow();
+        var response = send("POST", "/api/auth/login", json.writeValueAsString(Map.of("email", user.getEmail(), "password", "Password1")));
+        assertEquals(200, response.statusCode());
+        assertTrue(response.headers().allValues("Set-Cookie").stream().noneMatch(value -> value.startsWith("lifequest_remember=") && value.contains("Max-Age=2592000")));
+    }
+
+    @Test void expiredRememberCookieCannotRestoreSession() throws Exception {
+        User user = users.findById(userId).orElseThrow();
+        var response = send("POST", "/api/auth/login", json.writeValueAsString(Map.of("email", user.getEmail(), "password", "Password1", "remember", true)));
+        String cookie = response.headers().allValues("Set-Cookie").stream().filter(value -> value.startsWith("lifequest_remember=") && value.contains("Max-Age=2592000")).findFirst().orElseThrow();
+        jdbc.update("UPDATE remember_tokens SET expires_at = DATE_SUB(UTC_TIMESTAMP(), INTERVAL 1 SECOND) WHERE user_id=?", userId);
+        var request = HttpRequest.newBuilder(URI.create("http://127.0.0.1:"+port+"/api/auth/me")).header("Cookie", cookie.substring(0, cookie.indexOf(';'))).GET().build();
+        assertEquals(401, HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString()).statusCode());
+    }
 
     @Test void signupLoginAndSessionProtection() throws Exception {
         String email = UUID.randomUUID() + "@example.com";

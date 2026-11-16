@@ -27,6 +27,7 @@ test('unauthenticated visitors see the login and signup form', async () => {
   await new Promise(resolve => setImmediate(resolve));
   assert.match(app.innerHTML, /id="auth-form"/);
   assert.match(app.innerHTML, /data-value="signup"/);
+  assert.match(app.innerHTML, /name="remember"/);
   assert.equal(location.hash, '/login');
 });
 

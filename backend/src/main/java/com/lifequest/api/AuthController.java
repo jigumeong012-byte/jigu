@@ -18,8 +18,9 @@ import java.util.Locale;
 @RequiredArgsConstructor
 public class AuthController {
     private final UserRepository users;
+    private final com.lifequest.service.RememberMeService remember;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-    public record Credentials(@NotBlank @Email @Size(max=254) String email, @NotBlank @Size(min=8,max=72) String password, @Size(max=12) String name) {}
+    public record Credentials(@NotBlank @Email @Size(max=254) String email, @NotBlank @Size(min=8,max=72) String password, @Size(max=12) String name, Boolean remember) {}
     @PostMapping("/signup")
     @ResponseStatus(HttpStatus.CREATED)
     public void signup(@Valid @RequestBody Credentials input) {
@@ -31,17 +32,19 @@ public class AuthController {
         User user = new User(); user.setUsername(input.name().strip()); user.setEmail(email); user.setPasswordHash(encoder.encode(input.password())); users.save(user);
     }
     @PostMapping("/login")
-    public QuestDtos.UserResponse login(@Valid @RequestBody Credentials input, HttpServletRequest request) {
+    public QuestDtos.UserResponse login(@Valid @RequestBody Credentials input, HttpServletRequest request, jakarta.servlet.http.HttpServletResponse response) {
         if (input.password().getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials.");
         User user = users.findByEmail(input.email().strip().toLowerCase(Locale.ROOT)).orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 일치하지 않습니다."));
         if (user.getPasswordHash() == null || !encoder.matches(input.password(), user.getPasswordHash())) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 일치하지 않습니다.");
         HttpSession old = request.getSession(false); if (old != null) old.invalidate();
+        remember.clear(request, response);
         request.getSession(true).setAttribute("userId", user.getId());
+        if (Boolean.TRUE.equals(input.remember())) remember.issue(user.getId(), request, response);
         return QuestDtos.UserResponse.from(user);
     }
     @GetMapping("/me")
     public QuestDtos.UserResponse me(HttpSession session) { return QuestDtos.UserResponse.from(users.findById(requireUser(session)).orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED))); }
     @PostMapping("/logout")
-    public void logout(HttpServletRequest request) { HttpSession session = request.getSession(false); if (session != null) session.invalidate(); }
+    public void logout(HttpServletRequest request, jakarta.servlet.http.HttpServletResponse response) { remember.clear(request, response); HttpSession session = request.getSession(false); if (session != null) session.invalidate(); }
     public static Long requireUser(HttpSession session) { Object id = session.getAttribute("userId"); if (!(id instanceof Long)) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다."); return (Long) id; }
 }

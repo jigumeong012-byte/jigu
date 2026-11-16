@@ -10,6 +10,14 @@ CREATE TABLE IF NOT EXISTS users (
     CONSTRAINT ck_users_exp CHECK (exp >= 0)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS remember_tokens (
+    token_hash CHAR(64) NOT NULL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    expires_at DATETIME NOT NULL,
+    INDEX idx_remember_user (user_id),
+    CONSTRAINT fk_remember_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS quests (
     id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT NOT NULL,
