@@ -24,14 +24,17 @@ class QuestApiTest {
     @Value("${local.server.port}") int port;
     @Autowired UserRepository users;
     @Autowired QuestRepository quests;
-    final HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
+    final HttpClient client = HttpClient.newBuilder().cookieHandler(new java.net.CookieManager()).connectTimeout(Duration.ofSeconds(5)).build();
     final ObjectMapper json = new ObjectMapper();
     Long userId;
 
-    @BeforeEach void setUp() {
+    @BeforeEach void setUp() throws Exception {
         User user = new User();
         user.setUsername("test-" + UUID.randomUUID());
+        user.setEmail(UUID.randomUUID() + "@example.com");
+        user.setPasswordHash(new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder().encode("Password1"));
         userId = users.saveAndFlush(user).getId();
+        assertEquals(200, send("POST", "/api/auth/login", json.writeValueAsString(Map.of("email", user.getEmail(), "password", "Password1"))).statusCode());
     }
     @AfterEach void cleanUp() {
         quests.deleteAll(quests.findAllByUserIdOrderByCreatedAtAscIdAsc(userId));
@@ -56,6 +59,24 @@ class QuestApiTest {
         return body(result).get("id").asLong();
     }
     JsonNode user() throws Exception { return body(send("GET", "/api/users/" + userId, null)); }
+
+    @Test void signupLoginAndSessionProtection() throws Exception {
+        String email = UUID.randomUUID() + "@example.com";
+        String credentials = json.writeValueAsString(Map.of("name", "Explorer", "email", email, "password", "Password1"));
+        try {
+            assertEquals(201, send("POST", "/api/auth/signup", credentials).statusCode());
+            assertEquals(409, send("POST", "/api/auth/signup", credentials).statusCode());
+            User created = users.findByEmail(email).orElseThrow();
+            assertNotEquals("Password1", created.getPasswordHash());
+            assertEquals(200, send("POST", "/api/auth/logout", null).statusCode());
+            assertEquals(401, send("GET", "/api/quests", null).statusCode());
+            String bad = json.writeValueAsString(Map.of("email", email, "password", "Wrong123"));
+            assertEquals(401, send("POST", "/api/auth/login", bad).statusCode());
+            assertEquals(200, send("POST", "/api/auth/login", credentials).statusCode());
+            assertEquals(created.getId().longValue(), body(send("GET", "/api/auth/me", null)).get("id").asLong());
+            assertEquals(403, send("GET", "/api/users/" + userId, null).statusCode());
+        } finally { users.findByEmail(email).ifPresent(users::delete); }
+    }
 
     @Test void createUpdateListDeleteAndStaticPage() throws Exception {
         long id = create("쉬움");
@@ -113,7 +134,7 @@ class QuestApiTest {
         assertEquals(400,send("POST","/api/quests",payload("보통").replace("통합 테스트","  ")).statusCode());
         assertEquals(400,send("POST","/api/quests",payload("보통").replace("개발","<img src=x>")).statusCode());
         assertEquals(400,send("POST","/api/quests","{").statusCode());
-        assertEquals(404,send("GET","/api/users/9223372036854775807",null).statusCode());
+        assertEquals(403,send("GET","/api/users/9223372036854775807",null).statusCode());
         assertEquals(404,send("POST","/api/quests/9223372036854775807/complete",null).statusCode());
         assertEquals(0,body(send("GET","/api/quests?userId="+userId,null)).size());
     }

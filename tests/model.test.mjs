@@ -51,3 +51,4 @@ test('HTML error pages give a safe message',async t=>{
  t.mock.method(globalThis,'fetch',async()=>new Response('<html>server error</html>',{status:503}));
  await assert.rejects(request('/quests'),error=>error.status===503&&!error.message.includes('<html>'));
 });
+

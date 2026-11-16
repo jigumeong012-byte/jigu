@@ -12,7 +12,8 @@ public class UserController {
     private final QuestService questService;
 
     @GetMapping("/{id}")
-    public UserResponse getUser(@PathVariable Long id) {
+    public UserResponse getUser(@PathVariable Long id, jakarta.servlet.http.HttpSession session) {
+        if (!id.equals(AuthController.requireUser(session))) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN);
         return questService.getUser(id);
     }
 }

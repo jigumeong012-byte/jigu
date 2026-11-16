@@ -14,8 +14,14 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 50)
+    @Column(nullable = false, length = 50)
     private String username;
+
+    @Column(unique = true, length = 254)
+    private String email;
+
+    @Column(name = "password_hash", length = 100)
+    private String passwordHash;
 
     @Column(nullable = false)
     private int level = 1;

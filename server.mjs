@@ -4,8 +4,9 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 const root = path.resolve(fileURLToPath(new URL('./dist/', import.meta.url)));
 const types = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8', '.svg':'image/svg+xml', '.png':'image/png', '.webmanifest':'application/manifest+json' };
-const port = Number(process.env.PORT || 5173);
+const port = Number(process.env.PORT || process.env.DEV_SERVER_PORT || 5173);
 const backend = new URL(process.env.API_ORIGIN || 'http://127.0.0.1:8080');
+const proxyTimeoutMs = Number(process.env.API_PROXY_TIMEOUT_MS || 15000);
 const server = http.createServer(async (req,res) => {
   try {
     const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
@@ -15,7 +16,7 @@ const server = http.createServer(async (req,res) => {
         res.writeHead(response.statusCode, response.headers);
         response.pipe(res);
       });
-      upstream.setTimeout(15000, () => upstream.destroy(new Error('API timeout')));
+      upstream.setTimeout(proxyTimeoutMs, () => upstream.destroy(new Error('API timeout')));
       upstream.on('error', () => {
         if (!res.headersSent) res.writeHead(502, {'Content-Type':'application/json; charset=utf-8'}).end(JSON.stringify({message:'백엔드 서버를 먼저 실행해주세요. (npm start)'}));
         else res.destroy();

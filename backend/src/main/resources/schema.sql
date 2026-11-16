@@ -3,7 +3,8 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(50) NOT NULL,
     level INT NOT NULL DEFAULT 1,
     exp INT NOT NULL DEFAULT 0,
-    CONSTRAINT uk_users_username UNIQUE (username),
+    email VARCHAR(254) UNIQUE,
+    password_hash VARCHAR(100),
     CONSTRAINT ck_users_level CHECK (level >= 1),
     CONSTRAINT ck_users_exp CHECK (exp >= 0 AND exp < 100)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

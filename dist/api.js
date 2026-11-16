@@ -1,5 +1,3 @@
-export const USER_ID = 1;
-
 export async function request(path, options = {}) {
   let response;
   try {
@@ -15,9 +13,11 @@ export async function request(path, options = {}) {
     const error = await response.json().catch(() => ({}));
     const failure = Error(error.message || `요청을 처리하지 못했어요. (${response.status})`);
     failure.status = response.status;
+    if (response.status === 401 && (!path.startsWith('/auth/') || path === '/auth/me')) globalThis.dispatchEvent?.(new Event('lifequest-session-expired'));
     throw failure;
   }
-  return response.status === 204 ? null : response.json();
+  const body = await response.text();
+  return body ? JSON.parse(body) : null;
 }
 
 export function difficultyFor(xp) {
@@ -42,10 +42,10 @@ function payload(task) {
 }
 
 export const api = {
-  user: () => request(`/users/${USER_ID}`),
-  quests: () => request(`/quests?userId=${USER_ID}`),
-  create: task => request('/quests', { method:'POST', body:JSON.stringify({userId:USER_ID,...payload(task)}) }),
-  update: task => request(`/quests/${task.id}`, { method:'PUT', body:JSON.stringify(payload(task)) }),
-  complete: id => request(`/quests/${id}/complete`, { method:'POST' }),
-  remove: id => request(`/quests/${id}`, { method:'DELETE' })
+  user: () => request('/auth/me'),
+  quests: () => request('/quests'),
+  create: task => request('/quests', {method:'POST', body:JSON.stringify({userId:1,...payload(task)})}),
+  update: task => request(`/quests/${task.id}`, {method:'PUT', body:JSON.stringify(payload(task))}),
+  complete: id => request(`/quests/${id}/complete`, {method:'POST'}),
+  remove: id => request(`/quests/${id}`, {method:'DELETE'})
 };

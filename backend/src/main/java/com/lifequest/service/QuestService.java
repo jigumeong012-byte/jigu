@@ -41,8 +41,8 @@ public class QuestService {
     }
 
     @Transactional
-    public QuestResponse updateQuest(Long id, UpdateQuestRequest request) {
-        Quest quest = lockedQuest(id);
+    public QuestResponse updateQuest(Long id, UpdateQuestRequest request, Long userId) {
+        Quest quest = lockedQuest(id, userId);
         if (quest.isCompleted() && quest.getDifficulty() != request.difficulty()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "완료한 퀘스트의 난이도는 변경할 수 없습니다.");
         }
@@ -54,8 +54,8 @@ public class QuestService {
     }
 
     @Transactional
-    public QuestResponse completeQuest(Long id) {
-        Quest quest = lockedQuest(id);
+    public QuestResponse completeQuest(Long id, Long userId) {
+        Quest quest = lockedQuest(id, userId);
         if (quest.isCompleted()) return QuestResponse.from(quest);
 
         User user = userRepository.findByIdForUpdate(quest.getUser().getId())
@@ -75,12 +75,14 @@ public class QuestService {
     }
 
     @Transactional
-    public void deleteQuest(Long id) {
-        questRepository.delete(lockedQuest(id));
+    public void deleteQuest(Long id, Long userId) {
+        questRepository.delete(lockedQuest(id, userId));
     }
 
-    private Quest lockedQuest(Long id) {
-        return questRepository.findByIdForUpdate(id).orElseThrow(() -> missing("퀘스트"));
+    private Quest lockedQuest(Long id, Long userId) {
+        Quest quest = questRepository.findByIdForUpdate(id).orElseThrow(() -> missing("Quest"));
+        if (!quest.getUser().getId().equals(userId)) throw missing("Quest");
+        return quest;
     }
 
     private ResponseStatusException missing(String resource) {
