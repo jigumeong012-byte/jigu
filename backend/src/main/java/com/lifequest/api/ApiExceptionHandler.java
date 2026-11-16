@@ -20,7 +20,10 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class,
         MethodArgumentTypeMismatchException.class})
-    public ResponseEntity<Map<String, String>> invalid(Exception exception) {
+    public ResponseEntity<Map<String, String>> invalid(Exception exception, jakarta.servlet.http.HttpServletRequest request) {
+        if (request.getRequestURI().startsWith("/api/auth/")) {
+            return ResponseEntity.badRequest().body(Map.of("message", "이메일과 비밀번호를 확인해주세요. 비밀번호는 8자 이상이어야 합니다."));
+        }
         return ResponseEntity.badRequest().body(Map.of("message", "제목, 카테고리, 사용자 ID와 난이도(쉬움/보통/어려움)를 확인해주세요."));
     }
 

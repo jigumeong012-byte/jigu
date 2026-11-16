@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS quests (
     reward_exp INT NOT NULL,
     completed BOOLEAN NOT NULL DEFAULT FALSE,
     created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    completed_at DATETIME(6),
     INDEX idx_quests_user_id (user_id),
     CONSTRAINT fk_quests_user FOREIGN KEY (user_id) REFERENCES users (id),
     CONSTRAINT ck_quests_completed CHECK (completed IN (0, 1)),

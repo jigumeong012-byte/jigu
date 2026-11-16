@@ -31,6 +31,7 @@ export function toTask(quest, local = {}) {
     ...local,
     id: String(quest.id), title: quest.title, category: quest.category,
     xp: quest.rewardExp, difficulty: quest.difficulty, done: quest.completed,
+    completedAt: quest.completedAt || null,
     date: quest.createdAt.slice(0,10),
     note: local.note || '', schedule: local.schedule || '오늘 마감',
     star: Boolean(local.star), checks: local.checks || []

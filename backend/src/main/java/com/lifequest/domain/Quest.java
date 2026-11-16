@@ -39,6 +39,9 @@ public class Quest {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
+
     @PrePersist
     private void prePersist() {
         if (createdAt == null) createdAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));

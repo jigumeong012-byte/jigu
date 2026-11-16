@@ -28,9 +28,10 @@ test('task validates rewards and title and Seoul date',()=>{
  assert.equal(difficultyFor(10),'쉬움');assert.equal(difficultyFor(30),'보통');assert.equal(difficultyFor(50),'어려움');assert.throws(()=>difficultyFor(100));
 });
 test('remote data overrides stale task fields while preserving local notes',()=>{
- const t=toTask({id:12,title:'서버 제목',category:'개발',rewardExp:30,difficulty:'보통',completed:true,createdAt:'2026-10-27T12:00:00'},
+ const t=toTask({id:12,title:'서버 제목',category:'개발',rewardExp:30,difficulty:'보통',completed:true,createdAt:'2026-10-27T12:00:00',completedAt:'2026-11-01T12:00:00'},
  {id:'old',title:'old',xp:50,done:false,note:'메모',star:true,checks:[{id:'c1',done:true}]});
  assert.equal(t.id,'12');assert.equal(t.title,'서버 제목');assert.equal(t.xp,30);assert.equal(t.done,true);assert.equal(t.note,'메모');assert.equal(t.checks.length,1);
+ assert.equal(t.completedAt,'2026-11-01T12:00:00');
 });
 test('API sends backend difficulty instead of browser XP and handles 204',async t=>{
  let sent;t.mock.method(globalThis,'fetch',async (url,options)=>{sent={url,options};return new Response(null,{status:204});});

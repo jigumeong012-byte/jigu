@@ -23,11 +23,11 @@ public final class QuestDtos {
 
     public record QuestResponse(Long id, Long userId, String title, String category,
                                 Quest.Difficulty difficulty, int rewardExp, boolean completed,
-                                LocalDateTime createdAt) {
+                                LocalDateTime createdAt, LocalDateTime completedAt) {
         public static QuestResponse from(Quest quest) {
             return new QuestResponse(quest.getId(), quest.getUser().getId(), quest.getTitle(),
                 quest.getCategory(), quest.getDifficulty(), quest.getRewardExp(),
-                quest.isCompleted(), quest.getCreatedAt());
+                quest.isCompleted(), quest.getCreatedAt(), quest.getCompletedAt());
         }
     }
 

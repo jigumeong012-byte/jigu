@@ -25,7 +25,8 @@ public class AuthController {
     public void signup(@Valid @RequestBody Credentials input) {
         String email = input.email().strip().toLowerCase(Locale.ROOT);
         if (input.password().getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password is too long.");
-        if (input.name() == null || input.name().strip().length() < 2 || !input.password().matches("(?s)^(?=.*[A-Za-z])(?=.*[0-9]).*$")) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이름과 비밀번호를 확인해주세요.");
+        if (input.name() == null || input.name().strip().length() < 2) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이름을 2자 이상 입력해주세요.");
+        if (!input.password().matches("(?s)^(?=.*[A-Za-z])(?=.*[0-9])(?=.*\\p{Punct}).*$")) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "비밀번호는 영문, 숫자, 특수문자를 포함한 8자 이상이어야 합니다.");
         if (users.findByEmail(email).isPresent()) throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 가입된 이메일입니다.");
         User user = new User(); user.setUsername(input.name().strip()); user.setEmail(email); user.setPasswordHash(encoder.encode(input.password())); users.save(user);
     }

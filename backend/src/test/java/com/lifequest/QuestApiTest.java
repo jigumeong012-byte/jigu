@@ -62,8 +62,14 @@ class QuestApiTest {
 
     @Test void signupLoginAndSessionProtection() throws Exception {
         String email = UUID.randomUUID() + "@example.com";
-        String credentials = json.writeValueAsString(Map.of("name", "Explorer", "email", email, "password", "Password1"));
+        String credentials = json.writeValueAsString(Map.of("name", "Explorer", "email", email, "password", "Password1!"));
         try {
+            String noSymbol = json.writeValueAsString(Map.of("name", "Explorer", "email", email, "password", "Password1"));
+            assertEquals(400, send("POST", "/api/auth/signup", noSymbol).statusCode());
+            String shortPassword = json.writeValueAsString(Map.of("name", "Explorer", "email", email, "password", "Ab1!"));
+            var invalid = send("POST", "/api/auth/signup", shortPassword);
+            assertEquals(400, invalid.statusCode());
+            assertTrue(body(invalid).get("message").asText().contains("비밀번호"));
             assertEquals(201, send("POST", "/api/auth/signup", credentials).statusCode());
             assertEquals(409, send("POST", "/api/auth/signup", credentials).statusCode());
             User created = users.findByEmail(email).orElseThrow();
@@ -107,6 +113,7 @@ class QuestApiTest {
     @Test void completionIsIdempotentAndDeletionKeepsEarnedExperience() throws Exception {
         long id = create("어려움");
         for (int i=0;i<2;i++) assertEquals(200, send("POST", "/api/quests/"+id+"/complete", null).statusCode());
+        assertFalse(body(send("GET", "/api/quests", null)).get(0).get("completedAt").isNull());
         assertEquals(50, user().get("exp").asInt());
         assertEquals(1, user().get("level").asInt());
         assertEquals(204, send("DELETE", "/api/quests/"+id, null).statusCode());

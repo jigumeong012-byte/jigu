@@ -72,6 +72,7 @@ public class QuestService {
         user.setTotalExp(user.getTotalExp() + rewardExp);
         quest.setRewardExp(rewardExp);
         quest.setCompleted(true);
+        quest.setCompletedAt(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Seoul")));
         return QuestResponse.from(quest);
     }
 

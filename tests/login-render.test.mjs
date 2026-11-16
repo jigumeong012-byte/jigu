@@ -33,7 +33,10 @@ test('unauthenticated visitors see the login and signup form', async () => {
 test('growth page shows only the account’s completed quests', async () => {
   const source = (await readFile(new URL('../dist/app.js', import.meta.url), 'utf8'))
     .replace(/^import .*;\r?\n/gm, '');
-  for (const tasks of [[], [{id:'1',title:'내 퀘스트',category:'개발',xp:30,done:true,date:'2026-11-16',checks:[]}]]) {
+  for (const tasks of [[], [
+    {id:'1',title:'먼저 등록했지만 나중에 완료',category:'개발',xp:30,done:true,date:'2026-11-16',completedAt:'2026-11-16T12:00:00',checks:[]},
+    {id:'2',title:'나중에 등록했지만 먼저 완료',category:'개발',xp:30,done:true,date:'2026-11-16',completedAt:'2026-11-16T11:00:00',checks:[]}
+  ]]) {
     const app = { innerHTML: '' };
     const modal = { open:false, addEventListener() {} };
     const context = {
@@ -47,7 +50,7 @@ test('growth page shows only the account’s completed quests', async () => {
     vm.runInNewContext(source, context);
     await new Promise(resolve=>setImmediate(resolve));
     assert.doesNotMatch(app.innerHTML, /레벨 7 달성|1,500 XP|일평균 85 XP|예시 컬렉션/);
-    if (tasks.length) assert.match(app.innerHTML, /내 퀘스트/);
+    if (tasks.length) assert.ok(app.innerHTML.indexOf('먼저 등록했지만 나중에 완료') < app.innerHTML.indexOf('나중에 등록했지만 먼저 완료'));
     else assert.match(app.innerHTML, /아직 완료한 퀘스트가 없어요/);
   }
 });
