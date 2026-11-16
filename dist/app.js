@@ -1,5 +1,5 @@
-import { categories, initialState, stats, createTask, dayKey } from './model.js';
-import { api, toTask, request } from './api.js';
+import { categories, initialState, stats, createTask, dayKey } from './model.js?v=auth-20261116';
+import { api, toTask, request } from './api.js?v=auth-20261116';
 
 let installPrompt = null;
 window.addEventListener('beforeinstallprompt', event => {
@@ -93,7 +93,7 @@ function footer() { return `<footer class="footer"><div><strong>LifeQuest</stron
 function render() {
  const route=currentRoute();
  if (!serverReady && currentRoute() !== '/login') {
-  app.innerHTML = `<main><section class="card empty"><h1>LifeQuest</h1><p class="space-top" role="status">${esc(connectionError || '퀘스트와 성장 기록을 불러오고 있어요…')}</p>${connectionError ? '<button class="btn primary space-top" data-action="reconnect">다시 연결</button>' : ''}</section></main>`;
+  app.innerHTML = `<main><section class="card empty"><h1>LifeQuest</h1><p class="space-top" role="status">${esc(connectionError || '퀘스트와 성장 기록을 불러오고 있어요…')}</p>${connectionError ? '<button class="btn primary space-top" data-action="reconnect">다시 연결</button> <a class="btn secondary space-top" href="#/login">로그인 / 회원가입</a>' : ''}</section></main>`;
   return;
  }
  const auth=route==='/login';
