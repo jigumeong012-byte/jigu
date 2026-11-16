@@ -31,9 +31,10 @@ public final class QuestDtos {
         }
     }
 
-    public record UserResponse(Long id, String username, int level, int exp) {
+    public record UserResponse(Long id, String username, int level, int exp, long totalExp, int nextLevelExp) {
         public static UserResponse from(User user) {
-            return new UserResponse(user.getId(), user.getUsername(), user.getLevel(), user.getExp());
+            return new UserResponse(user.getId(), user.getUsername(), user.getLevel(), user.getExp(),
+                user.getTotalExp(), com.lifequest.service.QuestService.experienceForLevel(user.getLevel()));
         }
     }
 }

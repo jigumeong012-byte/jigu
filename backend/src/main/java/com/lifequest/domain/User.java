@@ -29,6 +29,9 @@ public class User {
     @Column(nullable = false)
     private int exp;
 
+    @Column(name = "total_exp")
+    private Long totalExp = 0L;
+
     @OneToMany(mappedBy = "user")
     @ToString.Exclude
     @EqualsAndHashCode.Exclude

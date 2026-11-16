@@ -63,15 +63,20 @@ public class QuestService {
         int rewardExp = quest.getDifficulty().getRewardExp();
         int totalExp = user.getExp() + rewardExp;
         int level = user.getLevel();
-        while (totalExp >= 100) {
+        while (totalExp >= experienceForLevel(level)) {
+            totalExp -= experienceForLevel(level);
             level++;
-            totalExp -= 100;
         }
         user.setLevel(level);
         user.setExp(totalExp);
+        user.setTotalExp(user.getTotalExp() + rewardExp);
         quest.setRewardExp(rewardExp);
         quest.setCompleted(true);
         return QuestResponse.from(quest);
+    }
+
+    public static int experienceForLevel(int level) {
+        return Math.toIntExact(100L + (level - 1L) * 20L);
     }
 
     @Transactional
