@@ -163,6 +163,25 @@ class QuestApiTest {
         for(var response:requests) assertEquals(200, response.join().statusCode());
         assertEquals(50, user().get("exp").asInt());
     }
+
+    @Test void undoCompletionReversesRewardAndLevelOnlyOnce() throws Exception {
+        long first = create("어려움"), second = create("어려움");
+        assertEquals(200, send("POST", "/api/quests/"+first+"/complete", null).statusCode());
+        assertEquals(200, send("POST", "/api/quests/"+second+"/complete", null).statusCode());
+        assertEquals(2, user().get("level").asInt());
+        var undone = send("DELETE", "/api/quests/"+first+"/complete", null);
+        assertEquals(200, undone.statusCode());
+        assertFalse(body(undone).get("completed").asBoolean());
+        assertTrue(body(undone).get("completedAt").isNull());
+        assertEquals(1, user().get("level").asInt());
+        assertEquals(50, user().get("exp").asInt());
+        assertEquals(50, user().get("totalExp").asInt());
+        assertEquals(200, send("DELETE", "/api/quests/"+first+"/complete", null).statusCode());
+        assertEquals(50, user().get("totalExp").asInt());
+        assertEquals(200, send("POST", "/api/quests/"+first+"/complete", null).statusCode());
+        assertEquals(2, user().get("level").asInt());
+        assertEquals(100, user().get("totalExp").asInt());
+    }
     @Test void higherLevelsRequireMoreExperience() throws Exception {
         for (int i=0; i<4; i++) {
             long id=create("어려움");

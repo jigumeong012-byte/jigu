@@ -48,5 +48,6 @@ export const api = {
   create: task => request('/quests', {method:'POST', body:JSON.stringify({userId:1,...payload(task)})}),
   update: task => request(`/quests/${task.id}`, {method:'PUT', body:JSON.stringify(payload(task))}),
   complete: id => request(`/quests/${id}/complete`, {method:'POST'}),
+  uncomplete: id => request(`/quests/${id}/complete`, {method:'DELETE'}),
   remove: id => request(`/quests/${id}`, {method:'DELETE'})
 };

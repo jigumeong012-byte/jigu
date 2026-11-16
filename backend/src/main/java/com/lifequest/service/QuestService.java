@@ -81,6 +81,28 @@ public class QuestService {
     }
 
     @Transactional
+    public QuestResponse undoCompletion(Long id, Long userId) {
+        Quest quest = lockedQuest(id, userId);
+        if (!quest.isCompleted()) return QuestResponse.from(quest);
+        User user = userRepository.findByIdForUpdate(userId).orElseThrow(() -> missing("사용자"));
+        int reward = quest.getRewardExp();
+        if (user.getTotalExp() < reward) throw new ResponseStatusException(HttpStatus.CONFLICT, "경험치 기록을 확인할 수 없습니다.");
+        int exp = user.getExp() - reward;
+        int level = user.getLevel();
+        while (exp < 0 && level > 1) {
+            level--;
+            exp += experienceForLevel(level);
+        }
+        if (exp < 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "경험치 기록을 확인할 수 없습니다.");
+        user.setLevel(level);
+        user.setExp(exp);
+        user.setTotalExp(user.getTotalExp() - reward);
+        quest.setCompleted(false);
+        quest.setCompletedAt(null);
+        return QuestResponse.from(quest);
+    }
+
+    @Transactional
     public void deleteQuest(Long id, Long userId) {
         questRepository.delete(lockedQuest(id, userId));
     }

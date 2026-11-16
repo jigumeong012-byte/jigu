@@ -36,6 +36,11 @@ public class QuestController {
         return questService.completeQuest(id, AuthController.requireUser(session));
     }
 
+    @DeleteMapping("/{id}/complete")
+    public QuestResponse undoCompletion(@PathVariable Long id, jakarta.servlet.http.HttpSession session) {
+        return questService.undoCompletion(id, AuthController.requireUser(session));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteQuest(@PathVariable Long id, jakarta.servlet.http.HttpSession session) {
         questService.deleteQuest(id, AuthController.requireUser(session));
