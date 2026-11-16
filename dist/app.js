@@ -1,5 +1,5 @@
-import { categories, initialState, stats, createTask, dayKey } from './model.js?v=auth-20261116';
-import { api, toTask, request } from './api.js?v=auth-20261116';
+import { categories, initialState, stats, createTask, dayKey } from './model.js?v=login-fix-2';
+import { api, toTask, request } from './api.js?v=login-fix-2';
 
 let installPrompt = null;
 window.addEventListener('beforeinstallprompt', event => {
@@ -20,7 +20,7 @@ if (!state || state.version !== 1 || !Array.isArray(state.tasks)) state = initia
 let cachedTasks = [];
 state.tasks = [];
 state.user = null;
-let serverReady = false, connectionError = '', mutationPending = false;
+let serverReady = false, connectionError = '', mutationPending = false, checkingSession = true;
 
 function loadUserState(user) {
  KEY = `lifequest.user.${user.id}`;
@@ -38,8 +38,10 @@ async function refreshRemote() {
  serverReady = true; connectionError = ''; save();
 }
 async function connect() {
- connectionError = ''; render();
- try { const user = await api.user(); loadUserState(user); await refreshRemote(); } catch(error) { serverReady = false; if(error.status === 401) go('/login'); else connectionError = error.message; }
+ checkingSession = true; connectionError = ''; render();
+ try { const user = await api.user(); loadUserState(user); await refreshRemote(); } catch(error) { serverReady = false; if(error.status !== 401) connectionError = error.message; }
+ checkingSession = false;
+ if (!serverReady) go('/login');
  render();
 }
 async function mutate(work) {
@@ -92,14 +94,14 @@ function header() {
 function footer() { return `<footer class="footer"><div><strong>LifeQuest</strong> © ${new Date().getFullYear()} LifeQuest. 매일 조금씩 성장하는 나.</div><div class="row"><button data-action="install-app">앱 설치</button><button data-action="info" data-kind="terms">이용약관</button><button data-action="info" data-kind="privacy">개인정보처리방침</button><button data-action="info" data-kind="support">고객지원</button></div></footer>`; }
 function render() {
  const route=currentRoute();
- if (!serverReady && currentRoute() !== '/login') {
+ if (!serverReady && checkingSession && route !== '/login') {
   app.innerHTML = `<main><section class="card empty"><h1>LifeQuest</h1><p class="space-top" role="status">${esc(connectionError || '퀘스트와 성장 기록을 불러오고 있어요…')}</p>${connectionError ? '<button class="btn primary space-top" data-action="reconnect">다시 연결</button> <a class="btn secondary space-top" href="#/login">로그인 / 회원가입</a>' : ''}</section></main>`;
   return;
  }
- const auth=route==='/login';
+ const auth=route==='/login' || !serverReady;
  document.body.classList.toggle('auth-page',auth);
  document.body.classList.toggle('focus-mode',state.settings.focus && timer.running);
- let body=route==='/'?home():route==='/tasks'?tasksPage():route==='/growth'?growth():route==='/settings'?settings():route==='/profile'?profile():route.startsWith('/task/')?detail(decodeURIComponent(route.slice(6))):auth?login():`<div class="empty"><h1>페이지를 찾을 수 없어요</h1><a class="btn primary space-top" href="#/">홈으로 돌아가기</a></div>`;
+ let body=auth?login():route==='/'?home():route==='/tasks'?tasksPage():route==='/growth'?growth():route==='/settings'?settings():route==='/profile'?profile():route.startsWith('/task/')?detail(decodeURIComponent(route.slice(6))):`<div class="empty"><h1>페이지를 찾을 수 없어요</h1><a class="btn primary space-top" href="#/">홈으로 돌아가기</a></div>`;
  app.innerHTML=`${auth?'':header()}<main id="main">${body}</main>${footer()}`;
  const names={'/':'홈','/tasks':'내 할 일','/growth':'성장','/settings':'설정','/profile':'프로필 수정','/login':'로그인'};
  document.title=`${names[route] || '퀘스트 상세'} · LifeQuest`;
