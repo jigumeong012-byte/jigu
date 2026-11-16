@@ -74,6 +74,9 @@ class QuestApiTest {
             assertEquals(401, send("POST", "/api/auth/login", bad).statusCode());
             assertEquals(200, send("POST", "/api/auth/login", credentials).statusCode());
             assertEquals(created.getId().longValue(), body(send("GET", "/api/auth/me", null)).get("id").asLong());
+            assertEquals(1, body(send("GET", "/api/auth/me", null)).get("level").asInt());
+            assertEquals(0, body(send("GET", "/api/auth/me", null)).get("exp").asInt());
+            assertEquals(0, body(send("GET", "/api/quests", null)).size());
             assertEquals(403, send("GET", "/api/users/" + userId, null).statusCode());
         } finally { users.findByEmail(email).ifPresent(users::delete); }
     }
