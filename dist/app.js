@@ -257,9 +257,41 @@ async function handleAuth(form,data){
  } catch(e) { error.textContent=e.message; }
 }
 function choosePhoto(){
+ const profile = state.profile;
+ const route = currentRoute();
+ const preview = document.querySelector('#avatar-preview');
  const input=document.createElement('input');input.type='file';input.accept='image/jpeg,image/png,image/webp';
  input.addEventListener('change',()=>{const file=input.files?.[0];if(!file)return;if(!['image/jpeg','image/png','image/webp'].includes(file.type)){toast('JPG, PNG, WebP 이미지를 선택해주세요.');return;}if(file.size>5*1024*1024){toast('5MB 이하의 사진을 선택해주세요.');return;}
- const reader=new FileReader();reader.onload=()=>{const picture=new Image();picture.onload=()=>{const canvas=document.createElement('canvas');canvas.width=canvas.height=240;const ctx=canvas.getContext('2d');const side=Math.min(picture.width,picture.height);ctx.drawImage(picture,(picture.width-side)/2,(picture.height-side)/2,side,side,0,0,240,240);const url=canvas.toDataURL('image/jpeg',.85);if(currentRoute()==='/profile'){avatarDraft=url;document.querySelector('#avatar-preview').innerHTML=`<img class="avatar xlarge" src="${url}" alt="변경할 프로필 사진">`;toast('사진을 선택했어요. 저장하면 적용됩니다.');}else{state.profile.avatar=url;save();render();toast('프로필 사진을 변경했어요.');}};picture.onerror=()=>toast('이미지를 읽을 수 없어요. 다른 파일을 선택해주세요.');picture.src=String(reader.result);};reader.readAsDataURL(file);});input.click();
+ const isCurrent = () => state.profile === profile && currentRoute() === route && (route !== '/profile' || preview?.isConnected);
+ const showReadError = () => { if (isCurrent()) toast('이미지를 읽을 수 없어요. 다른 파일을 선택해주세요.'); };
+ const reader = new FileReader();
+ reader.onerror = showReadError;
+ reader.onload = () => {
+  const picture = new Image();
+  picture.onerror = showReadError;
+  picture.onload = () => {
+   if (!isCurrent()) return;
+   const canvas = document.createElement('canvas');
+   canvas.width = canvas.height = 240;
+   const ctx = canvas.getContext('2d');
+   if (!ctx) { showReadError(); return; }
+   const side = Math.min(picture.width, picture.height);
+   ctx.drawImage(picture,(picture.width-side)/2,(picture.height-side)/2,side,side,0,0,240,240);
+   const url = canvas.toDataURL('image/jpeg',.85);
+   if (route === '/profile') {
+    avatarDraft = url;
+    preview.innerHTML = `<img class="avatar xlarge" src="${url}" alt="변경할 프로필 사진">`;
+    toast('사진을 선택했어요. 저장하면 적용됩니다.');
+   } else {
+    profile.avatar = url;
+    if (save()) { render(); toast('프로필 사진을 변경했어요.'); }
+   }
+  };
+  picture.src = String(reader.result);
+ };
+ reader.readAsDataURL(file);
+ });
+ input.click();
 }
 window.addEventListener('lifequest-session-expired',()=>{ if(!serverReady)return; serverReady=false; state=initialState(); cachedTasks=[]; timer.running=false; if(modal.open)closeModal(); go('/login'); toast('\uC138\uC158\uC774 \uB9CC\uB8CC\uB418\uC5C8\uC5B4\uC694. \uB2E4\uC2DC \uB85C\uADF8\uC778\uD574\uC8FC\uC138\uC694.'); });
 window.addEventListener('hashchange',()=>{if(modal.open)closeModal();render();window.scrollTo({top:0});});

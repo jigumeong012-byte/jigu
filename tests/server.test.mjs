@@ -11,10 +11,10 @@ test('development server serves assets, proxies JSON, and reports an unavailable
  });
  upstream.listen(0,'127.0.0.1');await once(upstream,'listening');
  t.after(()=>upstream.close());
- const child=spawn(process.execPath,['server.mjs'],{cwd:new URL('..',import.meta.url),env:{...process.env,PORT:'0',API_ORIGIN:`http://127.0.0.1:${upstream.address().port}`},windowsHide:true});
+ const child=spawn(process.execPath,['server.mjs'],{cwd:new URL('..',import.meta.url),env:{...process.env,PORT:'0',DEV_SERVER_HOST:'127.0.0.1',API_ORIGIN:`http://127.0.0.1:${upstream.address().port}`},windowsHide:true});
  t.after(()=>child.kill());
  const origin=await new Promise((resolve,reject)=>{
-  let output='';child.stdout.on('data',chunk=>{output+=chunk;const match=output.match(/http:\/\/localhost:(\d+)/);if(match)resolve(`http://127.0.0.1:${match[1]}`);});
+  let output='';child.stdout.on('data',chunk=>{output+=chunk;const match=output.match(/http:\/\/127\.0\.0\.1:\d+/);if(match)resolve(match[0]);});
   child.on('error',reject);child.on('exit',code=>reject(Error(`Server exited: ${code}`)));
  });
  assert.equal((await fetch(origin)).status,200);

@@ -51,7 +51,7 @@ class QuestApiTest {
     }
     JsonNode body(HttpResponse<String> response) { return json.readTree(response.body()); }
     String payload(String difficulty) {
-        return "{\"userId\":" + userId + ",\"title\":\"  통합 테스트  \",\"category\":\"개발\",\"difficulty\":\"" + difficulty + "\"}";
+        return "{\"title\":\"  통합 테스트  \",\"category\":\"개발\",\"difficulty\":\"" + difficulty + "\"}";
     }
     long create(String difficulty) throws Exception {
         var result = send("POST", "/api/quests", payload(difficulty));

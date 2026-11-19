@@ -36,7 +36,7 @@ test('remote data overrides stale task fields while preserving local notes',()=>
 test('API sends backend difficulty instead of browser XP and handles 204',async t=>{
  let sent;t.mock.method(globalThis,'fetch',async (url,options)=>{sent={url,options};return new Response(null,{status:204});});
  assert.equal(await api.create({title:'test',category:'개발',xp:50}),null);
- assert.equal(sent.url,'/api/quests');assert.deepEqual(JSON.parse(sent.options.body),{userId:1,title:'test',category:'개발',difficulty:'어려움'});
+ assert.equal(sent.url,'/api/quests');assert.deepEqual(JSON.parse(sent.options.body),{title:'test',category:'개발',difficulty:'어려움'});
 });
 test('API retains HTTP error status for recoverable validation failures',async t=>{
  t.mock.method(globalThis,'fetch',async()=>new Response(JSON.stringify({message:'완료한 보상은 고정'}),{status:409}));

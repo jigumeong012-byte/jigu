@@ -9,7 +9,7 @@ public final class QuestDtos {
     private QuestDtos() {}
 
     public record CreateQuestRequest(
-        @NotNull @Positive Long userId,
+        @Positive Long userId,
         @NotBlank @Size(max = 100) String title,
         @NotBlank @Pattern(regexp = "공부|개발|운동|생활|독서") String category,
         @NotNull Quest.Difficulty difficulty
