@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import java.security.MessageDigest;
@@ -18,8 +19,13 @@ public class RememberMeService {
     private static final String COOKIE = "lifequest_remember";
     private static final Duration LIFETIME = Duration.ofDays(30);
     private final JdbcTemplate jdbc;
+    private final boolean secureCookies;
     private final SecureRandom random = new SecureRandom();
-    public RememberMeService(JdbcTemplate jdbc) { this.jdbc = jdbc; }
+    public RememberMeService(JdbcTemplate jdbc,
+            @Value("${server.servlet.session.cookie.secure:false}") boolean secureCookies) {
+        this.jdbc = jdbc;
+        this.secureCookies = secureCookies;
+    }
 
     public void issue(Long userId, HttpServletRequest request, HttpServletResponse response) {
         byte[] token = new byte[32]; random.nextBytes(token);
@@ -44,7 +50,7 @@ public class RememberMeService {
         return null;
     }
     private void cookie(HttpServletResponse response, HttpServletRequest request, String value, Duration age) {
-        response.addHeader(HttpHeaders.SET_COOKIE, ResponseCookie.from(COOKIE, value).httpOnly(true).secure(request.isSecure()).sameSite("Lax").path("/").maxAge(age).build().toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, ResponseCookie.from(COOKIE, value).httpOnly(true).secure(secureCookies || request.isSecure()).sameSite("Lax").path("/").maxAge(age).build().toString());
     }
     private String hash(String token) {
         try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(token.getBytes(java.nio.charset.StandardCharsets.US_ASCII))); }

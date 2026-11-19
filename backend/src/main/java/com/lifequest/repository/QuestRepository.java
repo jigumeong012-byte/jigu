@@ -25,6 +25,6 @@ public interface QuestRepository extends JpaRepository<Quest, Long> {
     }
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT q FROM Quest q WHERE q.id = :id")
-    Optional<Quest> findByIdForUpdate(@Param("id") Long id);
+    @Query("SELECT q FROM Quest q WHERE q.id = :id AND q.user.id = :userId")
+    Optional<Quest> findOwnedByIdForUpdate(@Param("id") Long id, @Param("userId") Long userId);
 }

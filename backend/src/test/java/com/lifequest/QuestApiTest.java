@@ -139,6 +139,7 @@ class QuestApiTest {
     }
 
     @Test void signupLoginAndSessionProtection() throws Exception {
+        long ownedQuest = create("쉬움");
         String email = UUID.randomUUID() + "@example.com";
         String credentials = json.writeValueAsString(Map.of("name", "Explorer", "email", email, "password", "Password1!"));
         try {
@@ -162,6 +163,8 @@ class QuestApiTest {
             assertEquals(0, body(send("GET", "/api/auth/me", null)).get("exp").asInt());
             assertEquals(0, body(send("GET", "/api/quests", null)).size());
             assertEquals(403, send("GET", "/api/users/" + userId, null).statusCode());
+            assertEquals(404, send("DELETE", "/api/quests/" + ownedQuest, null).statusCode());
+            assertTrue(quests.existsById(ownedQuest));
         } finally { users.findByEmail(email).ifPresent(users::delete); }
     }
 

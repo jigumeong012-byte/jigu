@@ -14,7 +14,14 @@ public class WebCacheFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         String path = request.getRequestURI();
-        if (path.equals("/") || path.endsWith(".html") || path.endsWith(".js")) {
+        response.setHeader("X-Content-Type-Options", "nosniff");
+        if (path.equals("/") || path.endsWith(".html")) {
+            response.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self'; "
+                + "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+                + "font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; object-src 'none'; "
+                + "base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
+        }
+        if (path.equals("/") || path.endsWith(".html") || path.endsWith(".js") || path.startsWith("/api/")) {
             response.setHeader("Cache-Control", "no-store");
         }
         chain.doFilter(request, response);

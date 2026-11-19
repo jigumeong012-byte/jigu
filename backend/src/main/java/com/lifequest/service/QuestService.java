@@ -110,9 +110,7 @@ public class QuestService {
     }
 
     private Quest lockedQuest(Long id, Long userId) {
-        Quest quest = questRepository.findByIdForUpdate(id).orElseThrow(() -> missing("Quest"));
-        if (!quest.getUser().getId().equals(userId)) throw missing("Quest");
-        return quest;
+        return questRepository.findOwnedByIdForUpdate(id, userId).orElseThrow(() -> missing("Quest"));
     }
 
     private ResponseStatusException missing(String resource) {
