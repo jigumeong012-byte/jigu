@@ -73,7 +73,7 @@ class QuestApiTest {
         assertTrue(cookie.contains("SameSite=Lax"));
         String token = cookie.substring(0, cookie.indexOf(';'));
         HttpClient fresh = HttpClient.newHttpClient();
-        var me = HttpRequest.newBuilder(URI.create("http://127.0.0.1:"+port+"/api/auth/me")).header("Cookie",token).GET().build();
+        var me = HttpRequest.newBuilder(URI.create("http://127.0.0.1:"+port+"/api/auth/me?rememberedOnly=true")).header("Cookie",token).GET().build();
         assertEquals(200, fresh.send(me, HttpResponse.BodyHandlers.ofString()).statusCode());
         var logout = HttpRequest.newBuilder(URI.create("http://127.0.0.1:"+port+"/api/auth/logout")).header("Cookie",token).POST(HttpRequest.BodyPublishers.noBody()).build();
         assertEquals(200, fresh.send(logout, HttpResponse.BodyHandlers.ofString()).statusCode());
@@ -86,6 +86,8 @@ class QuestApiTest {
         var response = send("POST", "/api/auth/login", json.writeValueAsString(Map.of("email", user.getEmail(), "password", "Password1")));
         assertEquals(200, response.statusCode());
         assertTrue(response.headers().allValues("Set-Cookie").stream().noneMatch(value -> value.startsWith("lifequest_remember=") && value.contains("Max-Age=2592000")));
+        assertEquals(200, send("GET", "/api/auth/me", null).statusCode());
+        assertEquals(401, send("GET", "/api/auth/me?rememberedOnly=true", null).statusCode());
     }
 
     @Test void expiredRememberCookieCannotRestoreSession() throws Exception {

@@ -21,6 +21,7 @@ let cachedTasks = [];
 state.tasks = [];
 state.user = null;
 let serverReady = false, connectionError = '', mutationPending = false, checkingSession = true;
+const sessionKey = 'lifequest.session';
 
 function loadUserState(user) {
  KEY = `lifequest.user.${user.id}`;
@@ -39,7 +40,15 @@ async function refreshRemote() {
 }
 async function connect() {
  checkingSession = true; connectionError = ''; render();
- try { const user = await api.user(); loadUserState(user); await refreshRemote(); } catch(error) { serverReady = false; if(error.status !== 401) connectionError = error.message; }
+ try {
+  const user = await api.user(sessionStorage.getItem(sessionKey) === null);
+  loadUserState(user);
+  await refreshRemote();
+ } catch(error) {
+  serverReady = false;
+  if (error.status === 401) sessionStorage.removeItem(sessionKey);
+  else connectionError = error.message;
+ }
  checkingSession = false;
  if (!serverReady) go('/login');
  render();
@@ -219,7 +228,7 @@ document.addEventListener('click', async e=>{
  case 'photo':choosePhoto();break;
  case 'reset-photo':avatarDraft='';document.querySelector('#avatar-preview').innerHTML=`<span class="avatar xlarge">${esc(state.profile.name.slice(0,2))}</span>`;toast('저장하면 기본 이미지가 적용돼요.');break;
  case 'export':{const data={...state,account:undefined,exportedAt:new Date().toISOString()};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=`lifequest-backup-${dayKey()}.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('내 퀘스트와 프로필을 내보냈어요.');break;}
- case 'logout': await request('/auth/logout',{method:'POST'}); serverReady=false; state=initialState(); cachedTasks=[]; timer.running=false; if(modal.open)closeModal(); go('/login'); toast('\uB85C\uADF8\uC544\uC6C3\uD588\uC5B4\uC694.'); break;
+ case 'logout': await request('/auth/logout',{method:'POST'}); sessionStorage.removeItem(sessionKey); serverReady=false; state=initialState(); cachedTasks=[]; timer.running=false; if(modal.open)closeModal(); go('/login'); toast('\uB85C\uADF8\uC544\uC6C3\uD588\uC5B4\uC694.'); break;
  case 'confirm-logout':request('/auth/logout',{method:'POST'}).catch(()=>{});serverReady=false;state=initialState();localStorage.removeItem('lifequest.session');sessionStorage.removeItem('lifequest.session');timer.running=false;closeModal();go('/login');toast('로그아웃했어요.');break;
  case 'info':info(b.dataset.kind);break;
  case 'auth-tab':authMode=value;render();break;
@@ -252,6 +261,7 @@ async function handleAuth(form,data){
    authMode='login'; render(); toast('\uD68C\uC6D0\uAC00\uC785\uC774 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uB85C\uADF8\uC778\uD574\uC8FC\uC138\uC694.'); return;
   }
   const user=await request('/auth/login',{method:'POST',body:JSON.stringify({email,password,remember:data.get('remember')==='on'})});
+  sessionStorage.setItem(sessionKey, 'active');
   loadUserState(user); state.profile.email=email;
   await refreshRemote(); go('/'); toast(`${user.username}\uB2D8, \uD658\uC601\uD569\uB2C8\uB2E4.`);
  } catch(e) { error.textContent=e.message; }

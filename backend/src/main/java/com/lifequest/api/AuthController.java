@@ -43,7 +43,15 @@ public class AuthController {
         return QuestDtos.UserResponse.from(user);
     }
     @GetMapping("/me")
-    public QuestDtos.UserResponse me(HttpSession session) { return QuestDtos.UserResponse.from(users.findById(requireUser(session)).orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED))); }
+    public QuestDtos.UserResponse me(HttpSession session, HttpServletRequest request,
+                                    @RequestParam(defaultValue = "false") boolean rememberedOnly) {
+        Long userId = requireUser(session);
+        if (rememberedOnly && !userId.equals(remember.authenticate(request))) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        }
+        return QuestDtos.UserResponse.from(users.findById(userId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED)));
+    }
     @PostMapping("/logout")
     public void logout(HttpServletRequest request, jakarta.servlet.http.HttpServletResponse response) { remember.clear(request, response); HttpSession session = request.getSession(false); if (session != null) session.invalidate(); }
     public static Long requireUser(HttpSession session) { Object id = session.getAttribute("userId"); if (!(id instanceof Long)) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다."); return (Long) id; }

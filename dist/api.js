@@ -13,7 +13,7 @@ export async function request(path, options = {}) {
     const error = await response.json().catch(() => ({}));
     const failure = Error(error.message || `요청을 처리하지 못했어요. (${response.status})`);
     failure.status = response.status;
-    if (response.status === 401 && (!path.startsWith('/auth/') || path === '/auth/me')) globalThis.dispatchEvent?.(new Event('lifequest-session-expired'));
+    if (response.status === 401 && (!path.startsWith('/auth/') || path === '/auth/me' || path.startsWith('/auth/me?'))) globalThis.dispatchEvent?.(new Event('lifequest-session-expired'));
     throw failure;
   }
   const body = await response.text();
@@ -43,7 +43,7 @@ function payload(task) {
 }
 
 export const api = {
-  user: () => request('/auth/me'),
+  user: (rememberedOnly = false) => request(rememberedOnly ? '/auth/me?rememberedOnly=true' : '/auth/me'),
   quests: () => request('/quests'),
   create: task => request('/quests', {method:'POST', body:JSON.stringify(payload(task))}),
   update: task => request(`/quests/${task.id}`, {method:'PUT', body:JSON.stringify(payload(task))}),

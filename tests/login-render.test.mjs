@@ -17,14 +17,17 @@ test('unauthenticated visitors see the login and signup form', async () => {
     body: { classList: { toggle() {}, remove() {} }, style: {} }
   };
   const unauthorized = Object.assign(new Error('로그인이 필요합니다.'), { status: 401 });
+  let rememberedOnly;
   const context = {
-    ...model, api: { user: async () => { throw unauthorized; } }, toTask() {}, request() {},
+    ...model, api: { user: async value => { rememberedOnly = value; throw unauthorized; } }, toTask() {}, request() {},
     document, location, navigator: {}, localStorage: { getItem() { return null; }, setItem() {} },
+    sessionStorage: { getItem() { return null; }, removeItem() {} },
     window: { addEventListener: (name, fn) => { listeners[name] = fn; }, scrollTo() {} },
     setInterval() {}, setTimeout() {}, clearTimeout() {}, console
   };
   vm.runInNewContext(source, context);
   await new Promise(resolve => setImmediate(resolve));
+  assert.equal(rememberedOnly, true);
   assert.match(app.innerHTML, /id="auth-form"/);
   assert.match(app.innerHTML, /data-value="signup"/);
   assert.match(app.innerHTML, /name="remember"/);
@@ -46,6 +49,7 @@ test('growth page shows only the account’s completed quests', async () => {
       toTask: task=>task, request() {},
       document: {querySelector:s=>s==='#app'?app:s==='#modal'?modal:null, addEventListener(){}, body:{classList:{toggle(){},remove(){}},style:{}}},
       location:{hash:'#/growth'}, navigator:{}, localStorage:{getItem(){return null;},setItem(){}},
+      sessionStorage:{getItem(){return 'active';}},
       window:{addEventListener(){},scrollTo(){}}, setInterval(){},setTimeout(){},clearTimeout(){},console
     };
     vm.runInNewContext(source, context);
