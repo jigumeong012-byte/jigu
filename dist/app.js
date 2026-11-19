@@ -117,16 +117,42 @@ function render() {
  if (!auth && route === '/admin') loadAdminOverview(document.querySelector('#admin-overview'));
 }
 function adminPage() {
- return `<div class="settings-wrap"><div class="page-heading row between"><h1>관리자</h1><a class="btn secondary" href="#/">홈으로</a></div><section class="card"><div class="row between"><h2>서비스 현황</h2><button class="btn secondary" data-action="refresh-admin">새로고침</button></div><div class="space-top" id="admin-overview" aria-live="polite">현황을 불러오는 중이에요.</div></section></div>`;
+ return `<div class="admin-wrap"><div class="page-heading row between"><h1>관리자</h1><div class="row"><button class="btn secondary" data-action="refresh-admin">새로고침</button><a class="btn secondary" href="#/">홈으로</a></div></div><div id="admin-overview" class="stack" aria-busy="true"><p role="status">현황을 불러오는 중이에요.</p></div></div>`;
 }
 async function loadAdminOverview(panel) {
  try {
   const overview = await request('/admin/overview');
   if (!panel.isConnected) return;
-  const metrics = [['가입 계정', overview.users], ['등록된 퀘스트', overview.quests], ['완료한 퀘스트', overview.completedQuests]];
-  panel.innerHTML = `<div class="row wrap">${metrics.map(([label, count]) => `<div class="soft-box grow"><p class="muted small">${label}</p><strong>${fmt(count)}개</strong></div>`).join('')}</div>`;
+  const rate = overview.quests ? Math.round(overview.completedQuests / overview.quests * 100) : 0;
+  const metrics = [['가입 계정', fmt(overview.users)], ['등록된 퀘스트', fmt(overview.quests)], ['완료한 퀘스트', fmt(overview.completedQuests)], ['퀘스트 완료율', `${rate}%`]];
+  panel.innerHTML = `<section class="admin-metrics" aria-label="서비스 현황">${metrics.map(([label, count]) => `<div class="card"><p class="muted small">${label}</p><strong>${count}</strong></div>`).join('')}</section>
+  <section class="card"><div class="row between wrap"><h2>사용자 현황</h2><form id="admin-search" class="row" role="search"><input type="search" name="query" aria-label="이름 또는 이메일" placeholder="이름 또는 이메일" maxlength="254"><button class="btn primary" type="submit">검색</button></form></div><div class="space-top" id="admin-users"></div></section>`;
+  await loadAdminUsers(panel.querySelector('#admin-users'), '', 0);
  } catch (error) {
   if (panel.isConnected) panel.textContent = error.status === 403 ? '관리자 계정만 이 페이지를 볼 수 있어요.' : '현황을 불러오지 못했어요. 다시 시도해주세요.';
+ } finally {
+  panel.removeAttribute('aria-busy');
+ }
+}
+async function loadAdminUsers(panel, query, page) {
+ const sequence = String(Number(panel.dataset.sequence || 0) + 1);
+ panel.dataset.sequence = sequence;
+ panel.dataset.query = query;
+ const isCurrent = () => panel.isConnected && panel.dataset.sequence === sequence;
+ panel.innerHTML = '<p role="status">사용자 목록을 불러오는 중이에요.</p>';
+ try {
+  const params = new URLSearchParams({query, page});
+  const result = await request(`/admin/users?${params}`);
+  if (!isCurrent()) return;
+  if (!result.accounts.length) {
+   panel.innerHTML = `<p role="status">${query ? '검색 결과가 없어요.' : '표시할 사용자가 없어요.'}</p>${page > 0 ? '<button class="btn secondary space-top" data-action="admin-page" data-value="0">첫 페이지로</button>' : ''}`;
+   return;
+  }
+  const rows = result.accounts.map(account => `<tr><td>${fmt(account.id)}</td><th scope="row">${esc(account.username)}</th><td>${esc(account.email || '—')}</td><td>Lv. ${fmt(account.level)}</td><td>${fmt(account.totalExp)} XP</td><td>${fmt(account.completedQuests)} / ${fmt(account.quests)}</td></tr>`).join('');
+  panel.innerHTML = `<p class="small muted" role="status">사용자 ${fmt(result.totalAccounts)}명</p><div class="admin-table-scroll"><table class="admin-table"><thead><tr><th scope="col">ID</th><th scope="col">이름</th><th scope="col">이메일</th><th scope="col">레벨</th><th scope="col">누적 XP</th><th scope="col">완료 / 등록 퀘스트</th></tr></thead><tbody>${rows}</tbody></table></div>
+  ${result.totalPages > 1 ? `<div class="row between space-top"><button class="btn secondary" data-action="admin-page" data-value="${page - 1}" ${page === 0 ? 'disabled' : ''}>이전</button><span class="small muted">${fmt(page + 1)} / ${fmt(result.totalPages)}</span><button class="btn secondary" data-action="admin-page" data-value="${page + 1}" ${page + 1 >= result.totalPages ? 'disabled' : ''}>다음</button></div>` : ''}`;
+ } catch (error) {
+  if (isCurrent()) panel.innerHTML = `<p role="status">${error.status === 403 ? '관리자 권한이 필요해요.' : '사용자 목록을 불러오지 못했어요.'}</p><button class="btn secondary space-top" data-action="admin-page" data-value="${page}">다시 시도</button>`;
  }
 }
 function summaryCard() {
@@ -280,6 +306,7 @@ document.addEventListener('click', async e=>{
  case 'confirm-logout':request('/auth/logout',{method:'POST'}).catch(()=>{});serverReady=false;state=initialState();localStorage.removeItem('lifequest.session');sessionStorage.removeItem('lifequest.session');timer.running=false;closeModal();go('/login');toast('로그아웃했어요.');break;
  case 'info':await info(b.dataset.kind);break;
  case 'refresh-admin':render();break;
+ case 'admin-page': {const panel=document.querySelector('#admin-users');await loadAdminUsers(panel,panel.dataset.query,Number(value));break;}
  case 'auth-tab':authMode=value;render();break;
  case 'signup':authMode='signup';if(modal.open)closeModal();go('/login');break;
  case 'reveal':{const input=b.previousElementSibling;input.type=input.type==='password'?'text':'password';b.setAttribute('aria-label',input.type==='password'?'비밀번호 표시':'비밀번호 숨기기');b.setAttribute('aria-pressed',input.type==='text');break;}
@@ -291,6 +318,7 @@ document.addEventListener('input',e=>{if(e.target.id==='detail-title')e.target.s
 document.addEventListener('submit', async e=>{
  const form=e.target, data=new FormData(form);e.preventDefault();
  try {
+ if(form.id==='admin-search'){await loadAdminUsers(document.querySelector('#admin-users'),String(data.get('query')).trim(),0);return;}
  if(form.id==='task-form'){const values=Object.fromEntries(data);const existing=state.tasks.find(t=>t.id===form.dataset.id);if(existing?.done)values.xp=existing.xp;const fresh=createTask(values),t=state.tasks.find(t=>t.id===form.dataset.id);if(await mutate(async()=>{if(t){const updated={...t,title:fresh.title,note:fresh.note,category:fresh.category,schedule:fresh.schedule,xp:fresh.xp};Object.assign(t,toTask(await api.update(updated),updated));}else state.tasks.push(toTask(await api.create(fresh),fresh));})){closeModal();filter='전체';render();toast(t?'퀘스트를 수정했어요.':'새로운 퀘스트를 추가했어요!');}}
  if(form.id==='quick-form'){const task=createTask({title:data.get('title'),category:quickCategory,xp:30});if(await mutate(async()=>{state.tasks.push(toTask(await api.create(task),task));})){filter='전체';render();toast('새로운 퀘스트를 추가했어요!');}}
  if(form.id==='subtask-form'){if(!captureDetail())return;const text=String(data.get('text')).trim();if(!text)throw Error('하위 작업을 입력해주세요.');const task=state.tasks.find(t=>t.id===form.dataset.id);task.checks.push({id:crypto.randomUUID(),text,done:false});save();render();toast('하위 작업을 추가했어요.');}

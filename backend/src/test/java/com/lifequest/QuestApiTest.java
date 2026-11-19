@@ -78,6 +78,28 @@ class QuestApiTest {
         assertEquals(quests.countByCompletedTrue(), response.getBody().completedQuests());
     }
 
+    @Test void adminDirectoryFiltersAccountsAndCountsTheirQuests() throws Exception {
+        assertEquals(403, send("GET", "/api/admin/users", null).statusCode());
+        long completed = create("어려움");
+        create("쉬움");
+        assertEquals(200, send("POST", "/api/quests/" + completed + "/complete", null).statusCode());
+
+        var session = new org.springframework.mock.web.MockHttpSession();
+        session.setAttribute("userId", userId);
+        var admin = new AdminController(userId, users, quests);
+        var account = users.findById(userId).orElseThrow();
+        var response = admin.directory(session, account.getEmail().toUpperCase(Locale.ROOT), 0);
+        assertEquals("no-store", response.getHeaders().getCacheControl());
+        var directory = response.getBody();
+        assertEquals(1, directory.totalAccounts());
+        var row = directory.accounts().getFirst();
+        assertEquals(userId.longValue(), row.id());
+        assertEquals(50, row.totalExp());
+        assertEquals(2, row.quests());
+        assertEquals(1, row.completedQuests());
+        assertTrue(admin.directory(session, account.getUsername(), 1).getBody().accounts().isEmpty());
+    }
+
     @Test void rememberedLoginSurvivesSessionLossAndLogoutRevokesIt() throws Exception {
         User user = users.findById(userId).orElseThrow();
         String login = json.writeValueAsString(Map.of("email", user.getEmail(), "password", "Password1", "remember", true));
