@@ -191,13 +191,13 @@ class QuestApiTest {
         }
         assertEquals(2,user().get("level").asInt());
         assertEquals(100,user().get("exp").asInt());
-        assertEquals(120,user().get("nextLevelExp").asInt());
+        assertEquals(110,user().get("nextLevelExp").asInt());
         assertEquals(200,user().get("totalExp").asInt());
         long next=create("보통");
         assertEquals(200, send("POST", "/api/quests/"+next+"/complete", null).statusCode());
         assertEquals(3,user().get("level").asInt());
-        assertEquals(10,user().get("exp").asInt());
-        assertEquals(140,user().get("nextLevelExp").asInt());
+        assertEquals(20,user().get("exp").asInt());
+        assertEquals(120,user().get("nextLevelExp").asInt());
         assertEquals(230,user().get("totalExp").asInt());
     }
     @Test void concurrentDifferentQuestsPreserveRewardsAndLevelUp() throws Exception {

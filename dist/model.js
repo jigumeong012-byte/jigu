@@ -7,8 +7,8 @@ export function stats(state) {
   const earned = state.tasks.reduce((sum,t)=>sum+(t.done?t.xp:0),0);
   const level = state.user?.level ?? 1;
   const current = state.user?.exp ?? 0;
-  const xp = state.user?.totalExp ?? ((level-1)*100+current);
-  const required = state.user?.nextLevelExp ?? (100+(level-1)*20);
+  const xp = state.user?.totalExp ?? ((level-1)*(100+5*(level-2))+current);
+  const required = state.user?.nextLevelExp ?? (100+(level-1)*10);
   const done = state.tasks.filter(t=>t.done).length;
   return {xp,level,goal:xp-current+required,current,required,remaining:required-current,progress:Math.floor(current/required*100),done,total:state.tasks.length,rate:state.tasks.length?Math.round(done/state.tasks.length*100):0,earned};
 }

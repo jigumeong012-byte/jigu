@@ -61,15 +61,7 @@ public class QuestService {
         User user = userRepository.findByIdForUpdate(quest.getUser().getId())
             .orElseThrow(() -> missing("사용자"));
         int rewardExp = quest.getDifficulty().getRewardExp();
-        int totalExp = user.getExp() + rewardExp;
-        int level = user.getLevel();
-        while (totalExp >= experienceForLevel(level)) {
-            totalExp -= experienceForLevel(level);
-            level++;
-        }
-        user.setLevel(level);
-        user.setExp(totalExp);
-        user.setTotalExp(user.getTotalExp() + rewardExp);
+        updateExperience(user, user.getTotalExp() + rewardExp);
         quest.setRewardExp(rewardExp);
         quest.setCompleted(true);
         quest.setCompletedAt(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Seoul")));
@@ -77,7 +69,26 @@ public class QuestService {
     }
 
     public static int experienceForLevel(int level) {
-        return Math.toIntExact(100L + (level - 1L) * 20L);
+        return Math.toIntExact(100L + (level - 1L) * 10L);
+    }
+
+    public record LevelProgress(int level, int exp, int required) {}
+
+    public static LevelProgress levelProgress(long totalExp) {
+        int level = 1;
+        int required = experienceForLevel(level);
+        while (totalExp >= required) {
+            totalExp -= required;
+            required = experienceForLevel(++level);
+        }
+        return new LevelProgress(level, Math.toIntExact(totalExp), required);
+    }
+
+    private void updateExperience(User user, long totalExp) {
+        LevelProgress progress = levelProgress(totalExp);
+        user.setLevel(progress.level());
+        user.setExp(progress.exp());
+        user.setTotalExp(totalExp);
     }
 
     @Transactional
@@ -87,16 +98,7 @@ public class QuestService {
         User user = userRepository.findByIdForUpdate(userId).orElseThrow(() -> missing("사용자"));
         int reward = quest.getRewardExp();
         if (user.getTotalExp() < reward) throw new ResponseStatusException(HttpStatus.CONFLICT, "경험치 기록을 확인할 수 없습니다.");
-        int exp = user.getExp() - reward;
-        int level = user.getLevel();
-        while (exp < 0 && level > 1) {
-            level--;
-            exp += experienceForLevel(level);
-        }
-        if (exp < 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "경험치 기록을 확인할 수 없습니다.");
-        user.setLevel(level);
-        user.setExp(exp);
-        user.setTotalExp(user.getTotalExp() - reward);
+        updateExperience(user, user.getTotalExp() - reward);
         quest.setCompleted(false);
         quest.setCompletedAt(null);
         return QuestResponse.from(quest);

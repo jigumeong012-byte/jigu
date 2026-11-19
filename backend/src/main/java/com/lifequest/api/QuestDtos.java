@@ -2,6 +2,7 @@ package com.lifequest.api;
 
 import com.lifequest.domain.Quest;
 import com.lifequest.domain.User;
+import com.lifequest.service.QuestService;
 import jakarta.validation.constraints.*;
 import java.time.LocalDateTime;
 
@@ -33,8 +34,9 @@ public final class QuestDtos {
 
     public record UserResponse(Long id, String username, int level, int exp, long totalExp, int nextLevelExp) {
         public static UserResponse from(User user) {
-            return new UserResponse(user.getId(), user.getUsername(), user.getLevel(), user.getExp(),
-                user.getTotalExp(), com.lifequest.service.QuestService.experienceForLevel(user.getLevel()));
+            var progress = QuestService.levelProgress(user.getTotalExp());
+            return new UserResponse(user.getId(), user.getUsername(), progress.level(), progress.exp(),
+                user.getTotalExp(), progress.required());
         }
     }
 }

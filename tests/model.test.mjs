@@ -8,12 +8,12 @@ test('new account has no demo quests or phantom XP',()=>{
 });
 test('server level and XP are authoritative even after task deletion',()=>{
  const s=initialState();s.user={level:2,exp:30};s.tasks=[{done:true,xp:50,checks:[{done:true}]}];
- assert.equal(stats(s).xp,130);assert.equal(stats(s).progress,25);assert.equal(stats(s).remaining,90);
+ assert.equal(stats(s).xp,130);assert.equal(stats(s).progress,27);assert.equal(stats(s).remaining,80);
  s.tasks=[];assert.equal(stats(s).xp,130);
 });
 test('level boundary resets progress and checklist adds no XP',()=>{
  const s=initialState();s.user={level:2,exp:0};s.tasks=[{done:false,xp:50,checks:[{done:true}]}];
- assert.equal(stats(s).progress,0);assert.equal(stats(s).remaining,120);assert.equal(stats(s).earned,0);
+ assert.equal(stats(s).progress,0);assert.equal(stats(s).remaining,110);assert.equal(stats(s).earned,0);
 });
 test('level requirements and totals come from the server',()=>{
  const s=initialState();s.user={level:3,exp:70,totalExp:290,nextLevelExp:140};
