@@ -1,6 +1,7 @@
 package com.lifequest;
 
 import com.lifequest.domain.User;
+import com.lifequest.api.AdminController;
 import com.lifequest.repository.QuestRepository;
 import com.lifequest.repository.UserRepository;
 import org.junit.jupiter.api.*;
@@ -60,6 +61,22 @@ class QuestApiTest {
         return body(result).get("id").asLong();
     }
     JsonNode user() throws Exception { return body(send("GET", "/api/users/" + userId, null)); }
+
+    @Test void adminOverviewRequiresAuthenticationAndConfiguredAccount() throws Exception {
+        String path = "/api/admin/overview";
+        assertEquals(401, HttpClient.newHttpClient().send(request("GET", path, null),
+            HttpResponse.BodyHandlers.ofString()).statusCode());
+        assertEquals(403, send("GET", path, null).statusCode());
+
+        var session = new org.springframework.mock.web.MockHttpSession();
+        session.setAttribute("userId", userId);
+        var response = new AdminController(userId, users, quests).overview(session);
+        assertEquals(200, response.getStatusCode().value());
+        assertEquals("no-store", response.getHeaders().getCacheControl());
+        assertEquals(users.count(), response.getBody().users());
+        assertEquals(quests.count(), response.getBody().quests());
+        assertEquals(quests.countByCompletedTrue(), response.getBody().completedQuests());
+    }
 
     @Test void rememberedLoginSurvivesSessionLossAndLogoutRevokesIt() throws Exception {
         User user = users.findById(userId).orElseThrow();

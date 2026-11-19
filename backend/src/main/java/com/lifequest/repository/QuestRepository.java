@@ -9,6 +9,7 @@ import java.util.Optional;
 
 public interface QuestRepository extends JpaRepository<Quest, Long> {
     List<Quest> findAllByUserIdOrderByCreatedAtAscIdAsc(Long userId);
+    long countByCompletedTrue();
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT q FROM Quest q WHERE q.id = :id")

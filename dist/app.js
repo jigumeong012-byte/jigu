@@ -110,10 +110,24 @@ function render() {
  const auth=route==='/login' || !serverReady;
  document.body.classList.toggle('auth-page',auth);
  document.body.classList.toggle('focus-mode',state.settings.focus && timer.running);
- let body=auth?login():route==='/'?home():route==='/tasks'?tasksPage():route==='/growth'?growth():route==='/settings'?settings():route==='/profile'?profile():route.startsWith('/task/')?detail(decodeURIComponent(route.slice(6))):`<div class="empty"><h1>페이지를 찾을 수 없어요</h1><a class="btn primary space-top" href="#/">홈으로 돌아가기</a></div>`;
+ let body=auth?login():route==='/'?home():route==='/tasks'?tasksPage():route==='/growth'?growth():route==='/settings'?settings():route==='/profile'?profile():route==='/admin'?adminPage():route.startsWith('/task/')?detail(decodeURIComponent(route.slice(6))):`<div class="empty"><h1>페이지를 찾을 수 없어요</h1><a class="btn primary space-top" href="#/">홈으로 돌아가기</a></div>`;
  app.innerHTML=`${auth?'':header()}<main id="main">${body}</main>${footer()}`;
- const names={'/':'홈','/tasks':'내 할 일','/growth':'성장','/settings':'설정','/profile':'프로필 수정','/login':'로그인'};
+ const names={'/':'홈','/tasks':'내 할 일','/growth':'성장','/settings':'설정','/profile':'프로필 수정','/login':'로그인','/admin':'관리자'};
  document.title=`${names[route] || '퀘스트 상세'} · LifeQuest`;
+ if (!auth && route === '/admin') loadAdminOverview(document.querySelector('#admin-overview'));
+}
+function adminPage() {
+ return `<div class="settings-wrap"><div class="page-heading row between"><h1>관리자</h1><a class="btn secondary" href="#/">홈으로</a></div><section class="card"><div class="row between"><h2>서비스 현황</h2><button class="btn secondary" data-action="refresh-admin">새로고침</button></div><div class="space-top" id="admin-overview" aria-live="polite">현황을 불러오는 중이에요.</div></section></div>`;
+}
+async function loadAdminOverview(panel) {
+ try {
+  const overview = await request('/admin/overview');
+  if (!panel.isConnected) return;
+  const metrics = [['가입 계정', overview.users], ['등록된 퀘스트', overview.quests], ['완료한 퀘스트', overview.completedQuests]];
+  panel.innerHTML = `<div class="row wrap">${metrics.map(([label, count]) => `<div class="soft-box grow"><p class="muted small">${label}</p><strong>${fmt(count)}개</strong></div>`).join('')}</div>`;
+ } catch (error) {
+  if (panel.isConnected) panel.textContent = error.status === 403 ? '관리자 계정만 이 페이지를 볼 수 있어요.' : '현황을 불러오지 못했어요. 다시 시도해주세요.';
+ }
 }
 function summaryCard() {
  const s=stats(state), remain=state.tasks.filter(t=>!t.done).reduce((n,t)=>n+t.xp,0);
@@ -172,9 +186,43 @@ function radioChips(name,values,selected) {return `<div class="chips radio-chips
 function addModal(task=null) {
  openModal(`<div class="eyebrow">${icon('check')} QUICK QUEST</div>${modalHeader(task?'할 일 수정':'새로운 할 일 등록','매일의 작은 실천이 모여 큰 레벨업이 됩니다.')}<form id="task-form" data-id="${task?.id||''}"><label class="field"><span class="field-caption">할 일 이름 <span class="blue">*</span></span><input name="title" value="${esc(task?.title||'')}" required maxlength="100" placeholder="예: 알고리즘 문제 2개 풀기" autofocus></label><div class="field">카테고리${radioChips('category',categories,task?.category||'개발')}</div><label class="field"><span class="field-caption">상세 메모 <small>(선택)</small></span><textarea name="note" maxlength="1000" placeholder="목표를 조금 더 구체적으로 적어보세요">${esc(task?.note||'')}</textarea></label><div class="field">언제 실천할까요?${radioChips('schedule',['오늘 마감','매일 반복','주간 목표'],task?.schedule||'오늘 마감')}</div><div class="field">완료 보상${task?.done?`<p class="small muted">완료한 퀘스트의 보상은 ${task.xp} XP로 고정됩니다.</p>`:radioChips('xp',[10,30,50],task?.xp||30)}</div><div class="form-actions"><button type="button" class="btn secondary" data-action="close">취소</button><button type="submit" class="btn primary">${icon(task?'save':'plus')} ${task?'변경사항 저장':'할 일 추가하기'}</button></div></form>`,true);
 }
-function info(kind) {
- const content={terms:['Terms','LifeQuest','Manage your tasks and progress.',''],privacy:['Privacy','Data storage','Accounts, quests and progress are stored in the database.','Profile details and notes are stored in this browser.'],support:['Support','LifeQuest','Create and complete tasks to track your progress.','']};
- const [title,sub,...paragraphs]=content[kind];openModal(`${modalHeader(title,sub)}<div class="modal-text legal">${paragraphs.map(p=>`<p>${p}</p>`).join('')}</div><button class="btn primary full space-top" data-action="close">확인</button>`);
+async function info(kind) {
+ const content = {
+  terms: ['이용약관', [
+   ['서비스 이용', 'LifeQuest에서는 할 일을 퀘스트로 등록하고, 완료할 때마다 경험치를 쌓아 성장 기록을 확인할 수 있어요.'],
+   ['계정 관리', '다른 사람과 비밀번호를 공유하지 마세요. 공용 기기에서는 사용을 마친 뒤 로그아웃해 주세요.'],
+   ['이용 규칙', '다른 사람의 계정에 접근하거나 서비스 운영을 방해하는 행동은 금지됩니다. 점검이나 업데이트 중에는 일부 기능이 일시적으로 중단될 수 있어요.']
+  ]],
+  privacy: ['개인정보처리방침', [
+   ['서버에 저장하는 정보', '회원가입 시 이름과 이메일을 수집하고 비밀번호는 해시로 저장해요. 이 정보는 계정 관리와 로그인에 사용됩니다. 퀘스트와 경험치는 계정별 기록을 제공하기 위해 서버에 저장해요.'],
+   ['기기에 저장하는 정보', '프로필 사진, 메모, 체크리스트, 설정은 이 기기의 브라우저에 저장돼요. 브라우저에서 이 사이트의 데이터를 지우면 함께 삭제됩니다.'],
+   ['로그인 쿠키', '로그인 세션에 쿠키를 사용합니다. 로그인 유지를 선택하면 자동 로그인을 위해 최대 30일 동안 유효한 별도 쿠키를 사용해요.'],
+   ['개인정보 문의', '개인정보 열람, 정정, 삭제에 관한 문의는 고객지원에서 안내하는 연락처를 이용해 주세요.']
+  ]],
+  support: ['고객지원', [
+   ['앱 업데이트', '바탕화면 앱을 다시 열거나 새로고침하면 인터넷 연결 상태에서 최신 화면을 불러와요.'],
+   ['퀘스트가 보이지 않을 때', '원래 사용하던 계정으로 로그인했는지 확인한 뒤 새로고침해 주세요. 메모와 체크리스트는 작성할 때 사용했던 브라우저에서 확인할 수 있어요.'],
+   ['오류 제보', '문제가 발생한 화면과 재현 순서를 알려주세요. 비밀번호는 보내지 마세요.']
+  ]]
+ };
+ const [title, sections] = content[kind];
+ const needsContact = kind !== 'terms';
+ openModal(`${modalHeader(title)}<div class="modal-text legal stack">${sections.map(([heading, text]) => `<section><h3>${heading}</h3><p>${text}</p></section>`).join('')}${needsContact ? '<p id="support-contact" aria-live="polite">문의 연락처를 확인하는 중이에요.</p>' : ''}</div><button class="btn primary full space-top" data-action="close">확인</button>`);
+ if (!needsContact) return;
+ const contact = modal.querySelector('#support-contact');
+ try {
+  const {email} = await request('/support/contact');
+  if (!contact.isConnected) return;
+  if (typeof email === 'string' && /^[\w.+-]+@[\w.-]+\.[a-z]{2,}$/i.test(email)) {
+   const link = document.createElement('a');
+   link.className = 'btn secondary';
+   link.href = `mailto:${email}`;
+   link.textContent = `이메일 문의 (${email})`;
+   contact.replaceChildren(link);
+  } else contact.textContent = '문의용 이메일은 준비 중이에요.';
+ } catch {
+  if (contact.isConnected) contact.textContent = '문의 연락처를 불러오지 못했어요.';
+ }
 }
 function confirmModal(title,text,action,id='',label='확인') {openModal(`${modalHeader(title)}<p class="modal-text">${text}</p><div class="form-actions"><button class="btn secondary" data-action="close">취소</button><button class="btn ${action.includes('delete')?'danger':'primary'}" data-action="${action}" data-id="${id}">${label}</button></div>`);}
 function captureDetail() {const t=state.tasks.find(t=>currentRoute()===`/task/${t.id}`); const title=document.querySelector('#detail-title'),note=document.querySelector('#detail-note');if(t&&title){if(!title.value.trim()){title.setCustomValidity('퀘스트 제목을 입력해주세요.');title.reportValidity();return false;}t.title=title.value.trim();t.note=note.value.trim();}return true;}
@@ -230,7 +278,8 @@ document.addEventListener('click', async e=>{
  case 'export':{const data={...state,account:undefined,exportedAt:new Date().toISOString()};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=`lifequest-backup-${dayKey()}.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('내 퀘스트와 프로필을 내보냈어요.');break;}
  case 'logout': await request('/auth/logout',{method:'POST'}); sessionStorage.removeItem(sessionKey); serverReady=false; state=initialState(); cachedTasks=[]; timer.running=false; if(modal.open)closeModal(); go('/login'); toast('\uB85C\uADF8\uC544\uC6C3\uD588\uC5B4\uC694.'); break;
  case 'confirm-logout':request('/auth/logout',{method:'POST'}).catch(()=>{});serverReady=false;state=initialState();localStorage.removeItem('lifequest.session');sessionStorage.removeItem('lifequest.session');timer.running=false;closeModal();go('/login');toast('로그아웃했어요.');break;
- case 'info':info(b.dataset.kind);break;
+ case 'info':await info(b.dataset.kind);break;
+ case 'refresh-admin':render();break;
  case 'auth-tab':authMode=value;render();break;
  case 'signup':authMode='signup';if(modal.open)closeModal();go('/login');break;
  case 'reveal':{const input=b.previousElementSibling;input.type=input.type==='password'?'text':'password';b.setAttribute('aria-label',input.type==='password'?'비밀번호 표시':'비밀번호 숨기기');b.setAttribute('aria-pressed',input.type==='text');break;}
