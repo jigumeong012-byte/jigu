@@ -15,7 +15,7 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: lifequest-ci-only
+          MYSQL_ROOT_PASSWORD: ${{secrets.password}}
           MYSQL_DATABASE: lifequest_test
         ports:
           - 3306:3306
