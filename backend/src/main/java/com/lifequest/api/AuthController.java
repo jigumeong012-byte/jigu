@@ -19,6 +19,7 @@ import java.util.Locale;
 public class AuthController {
     private final UserRepository users;
     private final com.lifequest.service.RememberMeService remember;
+    private final com.lifequest.service.LoginAttemptGuard loginAttempts;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
     public record Credentials(@NotBlank @Email @Size(max=254) String email, @NotBlank @Size(min=8,max=72) String password, @Size(max=12) String name, Boolean remember) {}
     @PostMapping("/signup")
@@ -32,15 +33,31 @@ public class AuthController {
         User user = new User(); user.setUsername(input.name().strip()); user.setEmail(email); user.setPasswordHash(encoder.encode(input.password())); users.save(user);
     }
     @PostMapping("/login")
-    public QuestDtos.UserResponse login(@Valid @RequestBody Credentials input, HttpServletRequest request, jakarta.servlet.http.HttpServletResponse response) {
-        if (input.password().getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials.");
-        User user = users.findByEmail(input.email().strip().toLowerCase(Locale.ROOT)).orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 일치하지 않습니다."));
-        if (user.getPasswordHash() == null || !encoder.matches(input.password(), user.getPasswordHash())) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 일치하지 않습니다.");
-        HttpSession old = request.getSession(false); if (old != null) old.invalidate();
+    public QuestDtos.UserResponse login(@Valid @RequestBody Credentials input, HttpServletRequest request,
+                                        jakarta.servlet.http.HttpServletResponse response) {
+        String email = input.email().strip().toLowerCase(Locale.ROOT);
+        String attemptKey = loginAttempts.key(email, request.getRemoteAddr());
+        loginAttempts.checkAllowed(attemptKey);
+
+        User user = authenticate(email, input.password(), attemptKey);
+        loginAttempts.recordSuccess(attemptKey);
+
+        HttpSession previous = request.getSession(false);
+        if (previous != null) previous.invalidate();
         remember.clear(request, response);
         request.getSession(true).setAttribute("userId", user.getId());
         if (Boolean.TRUE.equals(input.remember())) remember.issue(user.getId(), request, response);
         return QuestDtos.UserResponse.from(user);
+    }
+
+    private User authenticate(String email, String password, String attemptKey) {
+        boolean oversized = password.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72;
+        User user = oversized ? null : users.findByEmail(email).orElse(null);
+        if (user == null || user.getPasswordHash() == null || !encoder.matches(password, user.getPasswordHash())) {
+            loginAttempts.recordFailure(attemptKey);
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 일치하지 않습니다.");
+        }
+        return user;
     }
     @GetMapping("/me")
     public QuestDtos.UserResponse me(HttpSession session, HttpServletRequest request,

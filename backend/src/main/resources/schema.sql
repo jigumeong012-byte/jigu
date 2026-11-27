@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS remember_tokens (
 CREATE TABLE IF NOT EXISTS quests (
     id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT NOT NULL,
-    title VARCHAR(255) NOT NULL,
+    title VARCHAR(100) NOT NULL,
     category VARCHAR(50) NOT NULL,
     difficulty ENUM('쉬움', '보통', '어려움') NOT NULL,
     reward_exp INT NOT NULL,

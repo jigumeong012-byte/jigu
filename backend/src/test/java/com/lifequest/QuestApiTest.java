@@ -138,6 +138,25 @@ class QuestApiTest {
         assertEquals(401, HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString()).statusCode());
     }
 
+    @Test void repeatedLoginFailuresAreThrottled() throws Exception {
+        String email = UUID.randomUUID() + "@example.com";
+        String credentials = json.writeValueAsString(Map.of("name", "Explorer", "email", email, "password", "Password1!"));
+        String wrong = json.writeValueAsString(Map.of("email", email, "password", "Wrong123!"));
+        try {
+            assertEquals(201, send("POST", "/api/auth/signup", credentials).statusCode());
+            assertEquals(200, send("POST", "/api/auth/logout", null).statusCode());
+            for (int attempt = 0; attempt < 5; attempt++) {
+                assertEquals(401, send("POST", "/api/auth/login", wrong).statusCode());
+            }
+            var blocked = send("POST", "/api/auth/login", wrong);
+            assertEquals(429, blocked.statusCode(), blocked.body());
+            assertEquals(429, send("POST", "/api/auth/login", credentials).statusCode());
+            String other = UUID.randomUUID() + "@example.com";
+            assertEquals(401, send("POST", "/api/auth/login",
+                json.writeValueAsString(Map.of("email", other, "password", "Wrong123!"))).statusCode());
+        } finally { users.findByEmail(email).ifPresent(users::delete); }
+    }
+
     @Test void signupLoginAndSessionProtection() throws Exception {
         long ownedQuest = create("쉬움");
         String email = UUID.randomUUID() + "@example.com";

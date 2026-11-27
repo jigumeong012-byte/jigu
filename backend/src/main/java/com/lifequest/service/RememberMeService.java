@@ -7,6 +7,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
@@ -33,6 +34,12 @@ public class RememberMeService {
         jdbc.update("INSERT INTO remember_tokens (token_hash,user_id,expires_at) VALUES (?,?,DATE_ADD(UTC_TIMESTAMP(), INTERVAL 30 DAY))", hash(value), userId);
         cookie(response, request, value, LIFETIME);
     }
+    /** 만료된 로그인 유지 토큰을 주기적으로 삭제해 테이블이 무한히 커지지 않게 합니다. */
+    @Scheduled(initialDelay = 60_000, fixedDelay = 24 * 60 * 60 * 1000)
+    public void purgeExpired() {
+        jdbc.update("DELETE FROM remember_tokens WHERE expires_at <= UTC_TIMESTAMP()");
+    }
+
     public Long authenticate(HttpServletRequest request) {
         String value = token(request);
         if (value == null || !value.matches("[A-Za-z0-9_-]{43}")) return null;
